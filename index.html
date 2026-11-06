@@ -843,7 +843,7 @@
       else if (nearNana && missionStage === 6) status.textContent = 'Nana is ready to speak — press E';
       else if (nearMeeting && missionStage === 7) status.textContent = 'the Patron’s private meeting — press E';
       else if (missionStage === 8) status.textContent = 'Choose: press 1 to hear him out or 2 to decline';
-      else if (missionStage === 9) status.textContent = 'Benedict has shared a confidential proposal';
+      else if (missionStage === 9) status.textContent = 'The Patron has shared a confidential proposal';
       else if (missionStage === 10) status.textContent = 'You declined the Patron’s invitation';
       else status.textContent = 'Explore the neighbourhood';
 
@@ -949,7 +949,7 @@
         dialogueOpen = true;
         dialogue.style.display = 'block';
         dialogue.querySelector('strong').textContent = 'Nana — Office Coordinator';
-        dialogueText.textContent = 'You must be Benedict. Mr Benedict said you might come by. He is away at the moment, but he left a message: he would like to meet you privately tomorrow. I cannot tell you what he wants. You will have to ask him yourself.';
+        dialogueText.textContent = 'You must be Benedict. The Patron said you might come by. He is away at the moment, but he left a message: he would like to meet you privately tomorrow. I cannot tell you what he wants. You will have to ask him yourself.';
         missionStage = 7;
         objective.textContent = 'New objective: Decide whether to accept the Patron’s invitation. Chapter 1 continues.';
       } else if (nearMeeting && eDown && !eWasDown && missionStage === 7) {
@@ -967,7 +967,7 @@
         dialogue.querySelector('strong').textContent = 'The Patron — The Proposal';
         dialogueText.textContent = 'Good. I want to restore the waterfront and create paid training opportunities through the workshop. The plan is ambitious, and I will show you the details before asking for any commitment. Meet me again when you are ready to review them.';
         missionStage = 9;
-        objective.textContent = 'New objective: Review Benedict’s waterfront renewal proposal before making any commitment.';
+        objective.textContent = 'New objective: Review the Patron’s waterfront renewal proposal before making any commitment.';
       } else if (missionStage === 8 && keys['2']) {
         dialogueOpen = true;
         dialogue.style.display = 'block';

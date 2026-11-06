@@ -634,10 +634,13 @@
     const dialogueText = document.getElementById('dialogueText');
     let missionStage = 0;
     let savedPaint = 0;
+    let bendigoJoined = false;
+    let bendigoWorkshopVisited = false;
+    let bendigoFollowTime = 0;
     const SAVE_KEY = 'streetsOfDestiny.save.v1';
     function saveGame(showMessage=true) {
       const data = {
-        version: 1, missionStage, selectedVehicle, savedPaint,
+        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoWorkshopVisited,
         player: {x: player.position.x, z: player.position.z, yaw: player.rotation.y},
         car: {x: playerCar.position.x, z: playerCar.position.z, yaw: playerCar.rotation.y}
       };
@@ -657,6 +660,8 @@
         const data=JSON.parse(raw);
         if(data.version!==1) throw new Error('Unsupported save version');
         missionStage=THREE.MathUtils.clamp(Number(data.missionStage)||0,0,10);
+        bendigoJoined=!!data.bendigoJoined;
+        bendigoWorkshopVisited=!!data.bendigoWorkshopVisited;
         selectedVehicle=0;
         selectVehicle(THREE.MathUtils.clamp(Number(data.selectedVehicle)||0,0,2));
         savedPaint=THREE.MathUtils.clamp(Number(data.savedPaint)||0,0,3);
@@ -719,6 +724,17 @@
         player.position.addScaledVector(direction, dt * (dodging ? 10 : 7));
         player.position.x = THREE.MathUtils.clamp(player.position.x, interiorMode ? roomX-6.2 : -5.5, interiorMode ? roomX+6.2 : 5.5);
         player.position.z = THREE.MathUtils.clamp(player.position.z, interiorMode ? roomZ-6.2 : -72, interiorMode ? roomZ+6.2 : 72);
+      }
+      if (bendigoJoined && !interiorMode) {
+        const followForward = new THREE.Vector3(Math.sin(player.rotation.y),0,Math.cos(player.rotation.y));
+        const followRight = new THREE.Vector3(Math.cos(player.rotation.y),0,-Math.sin(player.rotation.y));
+        const followTarget = player.position.clone().addScaledVector(followForward,-1.65).addScaledVector(followRight,1.15);
+        bendigo.position.lerp(followTarget,1-Math.exp(-dt*3.2));
+        const facePlayer = new THREE.Vector3(player.position.x-bendigo.position.x,0,player.position.z-bendigo.position.z);
+        if(facePlayer.lengthSq()>0.01) bendigo.rotation.y=Math.atan2(facePlayer.x,facePlayer.z);
+        bendigoFollowTime += dt*3.5;
+        bendigo.position.y = Math.abs(Math.sin(bendigoFollowTime))*0.045;
+        bendigoMarker.visible = false;
       }
       const moving = direction.lengthSq() > 0.001;
       if (moving) player.rotation.y = Math.atan2(direction.x, direction.z);
@@ -834,6 +850,8 @@
       else if (nearMarket) status.textContent = 'New Town Market — press E to enter';
       else if (nearCafe) status.textContent = 'Harbour Cafe — press E to enter';
       else if (nearHouse) status.textContent = 'Benedict’s Home — press E to enter';
+      else if (nearBendigoSupport && !bendigoJoined) status.textContent = 'Bendigo is nearby — press E to talk';
+      else if (nearWorkshop && bendigoJoined && !bendigoWorkshopVisited) status.textContent = 'Visit the workshop with Bendigo — press E';
       else if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
       else if (nearWorkshop && missionStage === 1) status.textContent = 'Community workshop — press E to enter';
       else if (nearKofi && missionStage === 2) status.textContent = 'Kofi is ready to talk — press E';
@@ -847,10 +865,20 @@
       else if (missionStage === 10) status.textContent = 'You declined the Patron’s invitation';
       else status.textContent = 'Explore the neighbourhood';
 
-      if (nearBendigoSupport && eDown && !eWasDown && !dialogueOpen) {
+      if (nearBendigoSupport && !bendigoJoined && eDown && !eWasDown && !dialogueOpen) {
+        bendigoJoined=true;
         dialogueOpen=true; dialogue.style.display='block';
-        dialogue.querySelector('strong').textContent='Bendigo — Trusted Ally';
-        dialogueText.textContent='Benedict, I have been keeping an eye on the workshop and the people around it. The Patron talks about renewal, but promises are easy. Let us listen carefully, ask the neighbours what they need, and make sure their voices stay part of every decision.';
+        dialogue.querySelector('strong').textContent='Bendigo — Your Ally';
+        dialogueText.textContent='Benedict, you should not have to carry this alone. I know the people around New Town, and they know me. I will walk with you. Let us return to the community workshop together and hear what the neighbourhood needs before the Patron makes any promises.';
+        objective.textContent='New companion: Bendigo has joined you. Return to the community workshop together.';
+        saveGame(false);
+      } else if (nearWorkshop && bendigoJoined && !bendigoWorkshopVisited && eDown && !eWasDown && !dialogueOpen) {
+        bendigoWorkshopVisited=true;
+        dialogueOpen=true; dialogue.style.display='block';
+        dialogue.querySelector('strong').textContent='Bendigo — At the Workshop';
+        dialogueText.textContent='This place matters, Benedict. People here need steady work, a safe place to learn, and a real say in what happens next. I will help you bring their concerns into the conversation with the Patron. We move forward together, but we do not forget who this neighbourhood belongs to.';
+        objective.textContent='Chapter progress: You and Bendigo have heard the workshop community. Continue exploring New Town and decide how to approach the Patron.';
+        saveGame(false);
       } else if (keys.f && !driving && nearPlayerCar) {
         driving = true; carSpeed = 0; playerCar.position.set(player.position.x,0,player.position.z);
         playerCar.rotation.y = player.rotation.y; player.visible = false;

@@ -40,7 +40,7 @@
   </style>
 </head>
 <body>
-  <div id="hud"><strong>STREETS OF DESTINY</strong><br>CINEMATIC BUILD · NEW TOWN DISTRICT<br><span id="status">Explore the neighbourhood</span></div>
+  <div id="hud"><strong>STREETS OF DESTINY</strong><br>BENEDICT’S STORY · NEW TOWN DISTRICT<br><span id="status">Playing as Benedict · Explore the neighbourhood</span></div>
   <div id="savePanel" style="position:fixed;top:112px;left:18px;z-index:3;display:flex;gap:7px"><button id="saveGame" style="padding:9px 12px;background:#14283a;color:#f5e7c8;border:1px solid #c99a4a;border-radius:3px;cursor:pointer">SAVE GAME</button><button id="loadGame" style="padding:9px 12px;background:#14283a;color:#f5e7c8;border:1px solid #c99a4a;border-radius:3px;cursor:pointer">LOAD GAME</button></div>
   <div id="hint">WASD / Arrows: move · Mouse drag: look · E: interact · F: enter/exit car · J: action pulse · Shift: dodge</div>
   <div id="mission" style="position:fixed;top:18px;right:18px;z-index:2;max-width:260px;padding:12px 16px;border:1px solid #ffffff33;border-radius:10px;background:#101820cc;line-height:1.5"><strong>FIRST MEETING</strong><br><span id="objective">Find Ama near the meeting point.</span></div>
@@ -168,7 +168,7 @@
     addParkedCar(4.35, -29, 0x263e55);
     addParkedCar(-4.4, -51, 0x6d3330);
 
-    // Marcus's personal arcade-style vehicle. F enters/exits; WASD steers and moves.
+    // Benedict's personal arcade-style vehicle. F enters/exits; WASD steers and moves.
     const playerCar = new THREE.Group();
     const carPaint = new THREE.MeshStandardMaterial({ color: 0x263f58, metalness: 0.68, roughness: 0.27 });
     const carGlass = new THREE.MeshStandardMaterial({ color: 0x101f2b, metalness: 0.42, roughness: 0.16 });
@@ -338,7 +338,7 @@
     }
     const marketRoom=makeRoom(0x9b7958,0x6a5948,false), cafeRoom=makeRoom(0x324c57,0x4e4942,true);
     const houseRoom=makeRoom(0x33404b,0x393c42,false);
-    // Marcus's modest home with a living room and bedroom.
+    // Benedict's modest home with a living room and bedroom.
     roomPart(houseRoom,4.8,0.22,2.5,0x49352a,roomX-2.6,0.42,roomZ-2.4);
     roomPart(houseRoom,1.4,1.5,0.18,0x263e50,roomX-2.6,1.25,roomZ-3.55);
     roomPart(houseRoom,1.3,0.08,0.8,0xb98c51,roomX+2.7,0.72,roomZ-2.2);
@@ -363,7 +363,7 @@
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 12), new THREE.MeshStandardMaterial({ color: 0x8d5d43 }));
     head.position.y = 2.05; head.castShadow = true; player.add(head);
 
-    // Extra silhouette details give Marcus a more readable streetwear look.
+    // Extra silhouette details give Benedict a more readable streetwear look.
     const jacketMat = new THREE.MeshStandardMaterial({ color: 0x172b40, roughness: 0.72 });
     const trimMat = new THREE.MeshStandardMaterial({ color: 0xc69a55, metalness: 0.28, roughness: 0.48 });
     const hairMat = new THREE.MeshStandardMaterial({ color: 0x17191d, roughness: 0.95 });
@@ -377,6 +377,17 @@
     belt.position.y = 0.68; belt.castShadow = true; player.add(belt);
     const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.1, 0.04), trimMat);
     buckle.position.set(0, 0.68, 0.25); player.add(buckle);
+    // Benedict is the playable lead: a tailored midnight suit with restrained gold detailing.
+    body.material.color.setHex(0x171b22);
+    jacketMat.color.setHex(0x111923);
+    trimMat.color.setHex(0xc58a25);
+    hairMat.color.setHex(0x090f18);
+    const leadCape = new THREE.Mesh(new THREE.ConeGeometry(0.78, 2.25, 4, 1, true), jacketMat);
+    leadCape.position.set(0, 1.48, 0.42); leadCape.rotation.x = Math.PI; leadCape.rotation.z = 0.08; leadCape.castShadow = true; player.add(leadCape);
+    const leadChest = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.12), trimMat);
+    leadChest.position.set(0, 1.24, -0.3); leadChest.castShadow = true; player.add(leadChest);
+    const leadTie = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.48, 0.06), new THREE.MeshStandardMaterial({color:0xd8d0bd}));
+    leadTie.position.set(0, 1.4, -0.39); player.add(leadTie);
     player.position.set(0, 0, 12); scene.add(player);
 
     // Procedural third-person character rig: pivoted limbs allow a simple walk, idle,
@@ -421,7 +432,7 @@
     amaHead.position.y = 1.95; ama.add(amaHead);
     ama.position.set(2.8, 0, -12); scene.add(ama);
 
-    // Community workshop: the next destination in Marcus's story
+    // Community workshop: the next destination in Benedict's story
     box(7, 5.5, 6, 0x806044, -11.5, 2.75, -39);
     box(7.2, 0.35, 6.2, 0x493a30, -11.5, 5.65, -39);
     box(2.2, 2.4, 0.12, 0x263d45, -11.5, 1.45, -35.92);
@@ -503,8 +514,22 @@
     benedict.rotation.y = Math.PI;
     scene.add(benedict);
 
+    // Bendigo is Benedict's trusted supporting character and a grounded voice in New Town.
+    const bendigo = new THREE.Group();
+    const bendigoBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.43, 0.98, 4, 8), new THREE.MeshStandardMaterial({color:0x315b54,roughness:0.82}));
+    bendigoBody.position.y=1.12; bendigoBody.castShadow=true; bendigo.add(bendigoBody);
+    const bendigoHead = new THREE.Mesh(new THREE.SphereGeometry(0.3,16,12),new THREE.MeshStandardMaterial({color:0x80543d,roughness:0.9}));
+    bendigoHead.position.y=1.96; bendigoHead.castShadow=true; bendigo.add(bendigoHead);
+    const bendigoJacket = new THREE.Mesh(new THREE.BoxGeometry(0.76,0.86,0.18),new THREE.MeshStandardMaterial({color:0x263d43,roughness:0.78}));
+    bendigoJacket.position.set(0,1.15,0.34); bendigo.add(bendigoJacket);
+    const bendigoTrim = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.58,0.06),new THREE.MeshStandardMaterial({color:0xc58a25,metalness:0.45}));
+    bendigoTrim.position.set(0,1.28,-0.39); bendigo.add(bendigoTrim);
+    bendigo.position.set(4.2,0,-47); scene.add(bendigo);
+    const bendigoMarker = new THREE.Mesh(new THREE.TorusGeometry(0.78,0.08,8,28),new THREE.MeshStandardMaterial({color:0x62d4b0,emissive:0x164b3b}));
+    bendigoMarker.rotation.x=Math.PI/2; bendigoMarker.position.set(4.2,0.16,-47); scene.add(bendigoMarker);
 
-    // Benedict's waterfront office: a compact, explorable-feeling exterior landmark.
+
+    // the Patron's waterfront office: a compact, explorable-feeling exterior landmark.
     box(8, 7, 7, 0x39434a, -12.5, 3.5, -65);
     box(8.3, 0.4, 7.3, 0x171e26, -12.5, 7.2, -65);
     box(2.1, 3.2, 0.18, 0x172d3a, -12.5, 1.7, -61.4);
@@ -518,7 +543,7 @@
     officeBeam.position.y = 1.55; officeMarker.add(officeBeam);
     officeMarker.position.set(-4.4, 0, -65); scene.add(officeMarker);
 
-    // Nana, the office coordinator. She is the first person Marcus meets at the waterfront office.
+    // Nana, the office coordinator. She is the first person Benedict meets at the waterfront office.
     const nana = new THREE.Group();
     const nanaBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.92, 4, 8), new THREE.MeshStandardMaterial({ color: 0x7650a2 }));
     nanaBody.position.y = 1.08; nana.add(nanaBody);
@@ -777,7 +802,7 @@
         }
         if (playerFocus <= 0) {
           playerFocus = 100; player.position.set(0, 0, -18);
-          combatStatus.textContent = 'Marcus took a breather and regrouped. Try again.';
+          combatStatus.textContent = 'Benedict took a breather and regrouped. Try again.';
         }
       } else if (combatStarted && encounterWon) combatPanel.style.display = 'none';
 
@@ -793,6 +818,7 @@
       const nearOffice = player.position.distanceTo(officeMarker.position) < 3.4;
       const nearNana = player.position.distanceTo(nana.position) < 3.2;
       const nearMeeting = player.position.distanceTo(meetingMarker.position) < 3.4;
+      const nearBendigoSupport = player.position.distanceTo(bendigo.position) < 3.2;
       const nearPlayerCar = !driving && !interiorMode && player.position.distanceTo(playerCar.position) < 3.8;
       const nearGarage = !driving && !interiorMode && player.position.distanceTo(garageMarker.position) < 3.5;
       const nearMarket = !interiorMode && player.position.distanceTo(marketMarker.position) < 3.2;
@@ -800,31 +826,35 @@
       const nearHouse = !interiorMode && player.position.distanceTo(houseMarker.position) < 3.5;
       const eDown = !!keys.e;
       document.getElementById('garageTouch').style.display = garageOpen ? 'flex' : 'none';
-      if (driving) status.textContent = 'Driving Marcus’s car — W/S accelerate and reverse · A/D steer · F exit';
+      if (driving) status.textContent = 'Driving Benedict’s car — W/S accelerate and reverse · A/D steer · F exit';
       else if (garageOpen) status.textContent = 'Garage open — press 1–4 to customise · E to close';
-      else if (nearGarage) status.textContent = 'New Town Garage — press E to customise Marcus’s car';
-      else if (nearPlayerCar) status.textContent = 'Marcus’s car — press F to drive';
-      else if (interiorMode) status.textContent = 'Inside ' + (interiorMode==='market'?'New Town Market':interiorMode==='house'?'Marcus’s Home':'Harbour Cafe') + ' — press E to exit';
+      else if (nearGarage) status.textContent = 'New Town Garage — press E to customise Benedict’s car';
+      else if (nearPlayerCar) status.textContent = 'Benedict’s car — press F to drive';
+      else if (interiorMode) status.textContent = 'Inside ' + (interiorMode==='market'?'New Town Market':interiorMode==='house'?'Benedict’s Home':'Harbour Cafe') + ' — press E to exit';
       else if (nearMarket) status.textContent = 'New Town Market — press E to enter';
       else if (nearCafe) status.textContent = 'Harbour Cafe — press E to enter';
-      else if (nearHouse) status.textContent = 'Marcus’s Home — press E to enter';
+      else if (nearHouse) status.textContent = 'Benedict’s Home — press E to enter';
       else if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
       else if (nearWorkshop && missionStage === 1) status.textContent = 'Community workshop — press E to enter';
       else if (nearKofi && missionStage === 2) status.textContent = 'Kofi is ready to talk — press E';
       else if (nearBenedict && missionStage === 3) status.textContent = 'A stranger is waiting — press E';
-      else if (nearAma && missionStage === 4) status.textContent = 'Ask Ama about Benedict — press E';
-      else if (nearOffice && missionStage === 5) status.textContent = 'Benedict’s waterfront office — press E';
+      else if (nearAma && missionStage === 4) status.textContent = 'Ask Ama about the Patron — press E';
+      else if (nearOffice && missionStage === 5) status.textContent = 'the Patron’s waterfront office — press E';
       else if (nearNana && missionStage === 6) status.textContent = 'Nana is ready to speak — press E';
-      else if (nearMeeting && missionStage === 7) status.textContent = 'Benedict’s private meeting — press E';
+      else if (nearMeeting && missionStage === 7) status.textContent = 'the Patron’s private meeting — press E';
       else if (missionStage === 8) status.textContent = 'Choose: press 1 to hear him out or 2 to decline';
       else if (missionStage === 9) status.textContent = 'Benedict has shared a confidential proposal';
-      else if (missionStage === 10) status.textContent = 'You declined Benedict’s invitation';
+      else if (missionStage === 10) status.textContent = 'You declined the Patron’s invitation';
       else status.textContent = 'Explore the neighbourhood';
 
-      if (keys.f && !driving && nearPlayerCar) {
+      if (nearBendigoSupport && eDown && !eWasDown && !dialogueOpen) {
+        dialogueOpen=true; dialogue.style.display='block';
+        dialogue.querySelector('strong').textContent='Bendigo — Trusted Ally';
+        dialogueText.textContent='Benedict, I have been keeping an eye on the workshop and the people around it. The Patron talks about renewal, but promises are easy. Let us listen carefully, ask the neighbours what they need, and make sure their voices stay part of every decision.';
+      } else if (keys.f && !driving && nearPlayerCar) {
         driving = true; carSpeed = 0; playerCar.position.set(player.position.x,0,player.position.z);
         playerCar.rotation.y = player.rotation.y; player.visible = false;
-        status.textContent = 'Driving Marcus’s car — W/S accelerate and reverse · A/D steer · F exit';
+        status.textContent = 'Driving Benedict’s car — W/S accelerate and reverse · A/D steer · F exit';
         keys.f = false;
       } else if (keys.f && driving) {
         driving = false; carSpeed = 0; player.visible = true;
@@ -858,7 +888,7 @@
         interiorMode='house'; houseRoom.visible=true; marketRoom.visible=false; cafeRoom.visible=false;
         player.position.set(roomX,0,roomZ+5.2);
         dialogueOpen=true; dialogue.style.display='block';
-        dialogue.querySelector('strong').textContent='Marcus’s Home';
+        dialogue.querySelector('strong').textContent='Benedict’s Home';
         dialogueText.textContent='A quiet place to call your own. The living room looks out toward the harbour, while the bedroom offers a little peace after a long day. Your parking bay is outside. Press E to step back into New Town.';
       } else if (nearMarket && eDown && !eWasDown) {
         interiorMode='market'; marketRoom.visible=true; cafeRoom.visible=false;
@@ -876,7 +906,7 @@
         dialogueOpen = true;
         dialogue.style.display = 'block';
         dialogue.querySelector('strong').textContent = 'Ama';
-        dialogueText.textContent = 'Marcus? It has been a long time. The neighbourhood has changed, but people still remember you. Come by the workshop when you are ready.';
+        dialogueText.textContent = 'Benedict? It has been a long time. The neighbourhood has changed, but people still remember you. Come by the workshop when you are ready.';
         missionStage = 1;
         objective.textContent = 'Completed: Meet Ama. Next: Visit the community workshop.';
       } else if (nearWorkshop && eDown && !eWasDown && missionStage === 1) {
@@ -897,54 +927,54 @@
       } else if (nearBenedict && eDown && !eWasDown && missionStage === 3) {
         dialogueOpen = true;
         dialogue.style.display = 'block';
-        dialogue.querySelector('strong').textContent = 'Benedict — The Stranger';
-        dialogueText.textContent = 'You have been asking questions about this neighbourhood, Marcus. Names carry weight here, and mine opens doors you have not even noticed yet. I can offer you an opportunity, but first you should decide who you can trust. We will speak again.';
+        dialogue.querySelector('strong').textContent = 'The Patron — A Powerful Stranger';
+        dialogueText.textContent = 'You have been asking questions about this neighbourhood, Benedict. Names carry weight here, and mine opens doors you have not even noticed yet. I can offer you an opportunity, but first you should decide who you can trust. We will speak again.';
         missionStage = 4;
-        objective.textContent = 'New contact: Benedict. A powerful stranger has taken an interest in Marcus. Find out why.';
+        objective.textContent = 'New contact: The Patron. A powerful stranger has taken an interest in Benedict. Find out why.';
       } else if (nearAma && eDown && !eWasDown && missionStage === 4) {
         dialogueOpen = true;
         dialogue.style.display = 'block';
         dialogue.querySelector('strong').textContent = 'Ama';
-        dialogueText.textContent = 'Benedict? I know the name. He has funded projects around New Town, but nobody seems to know where his money really comes from. Some people admire him; others keep their distance. If he has approached you, Marcus, take your time before accepting anything. I heard he has an office near the old waterfront. That may be your next lead.';
+        dialogueText.textContent = 'The Patron? I know the name. He has funded projects around New Town, but nobody seems to know where his money really comes from. Some people admire him; others keep their distance. If he has approached you, Benedict, take your time before accepting anything. I heard he has an office near the old waterfront. That may be your next lead.';
         missionStage = 5;
-        objective.textContent = 'New lead: Ask around about Benedict’s waterfront office. Find out why he is interested in Marcus.';
+        objective.textContent = 'New lead: Ask around about the Patron’s waterfront office. Find out why he is interested in Benedict.';
       } else if (nearOffice && eDown && !eWasDown && missionStage === 5) {
         dialogueOpen = true;
         dialogue.style.display = 'block';
         dialogue.querySelector('strong').textContent = 'Waterfront Office';
-        dialogueText.textContent = 'The building is quieter than the busy street outside. A discreet reception desk sits behind the glass entrance. A woman notices Marcus approaching and steps outside to meet him.';
+        dialogueText.textContent = 'The building is quieter than the busy street outside. A discreet reception desk sits behind the glass entrance. A woman notices Benedict approaching and steps outside to meet him.';
         missionStage = 6;
         objective.textContent = 'At the waterfront office: Speak with Nana, the office coordinator.';
       } else if (nearNana && eDown && !eWasDown && missionStage === 6) {
         dialogueOpen = true;
         dialogue.style.display = 'block';
         dialogue.querySelector('strong').textContent = 'Nana — Office Coordinator';
-        dialogueText.textContent = 'You must be Marcus. Mr Benedict said you might come by. He is away at the moment, but he left a message: he would like to meet you privately tomorrow. I cannot tell you what he wants. You will have to ask him yourself.';
+        dialogueText.textContent = 'You must be Benedict. Mr Benedict said you might come by. He is away at the moment, but he left a message: he would like to meet you privately tomorrow. I cannot tell you what he wants. You will have to ask him yourself.';
         missionStage = 7;
-        objective.textContent = 'New objective: Decide whether to accept Benedict’s invitation. Chapter 1 continues.';
+        objective.textContent = 'New objective: Decide whether to accept the Patron’s invitation. Chapter 1 continues.';
       } else if (nearMeeting && eDown && !eWasDown && missionStage === 7) {
         benedict.position.set(2.7, 0, -69);
         benedict.rotation.y = Math.PI;
         dialogueOpen = true;
         dialogue.style.display = 'block';
-        dialogue.querySelector('strong').textContent = 'Benedict — Private Meeting';
-        dialogueText.textContent = 'Marcus, I have watched how you returned to this neighbourhood and listened before making promises. I am putting together a city renewal initiative. I want you involved, but trust should never be demanded. You have a choice: hear my proposal, or walk away. Press 1 to hear him out, or 2 to decline.';
+        dialogue.querySelector('strong').textContent = 'The Patron — Private Meeting';
+        dialogueText.textContent = 'Benedict, I have watched how you returned to this neighbourhood and listened before making promises. I am putting together a city renewal initiative. I want you involved, but trust should never be demanded. You have a choice: hear my proposal, or walk away. Press 1 to hear him out, or 2 to decline.';
         missionStage = 8;
-        objective.textContent = 'Decision: Will Marcus hear Benedict’s proposal or decline the invitation?';
+        objective.textContent = 'Decision: Will Benedict hear the Patron’s proposal or decline the invitation?';
       } else if (missionStage === 8 && keys['1']) {
         dialogueOpen = true;
         dialogue.style.display = 'block';
-        dialogue.querySelector('strong').textContent = 'Benedict — The Proposal';
+        dialogue.querySelector('strong').textContent = 'The Patron — The Proposal';
         dialogueText.textContent = 'Good. I want to restore the waterfront and create paid training opportunities through the workshop. The plan is ambitious, and I will show you the details before asking for any commitment. Meet me again when you are ready to review them.';
         missionStage = 9;
         objective.textContent = 'New objective: Review Benedict’s waterfront renewal proposal before making any commitment.';
       } else if (missionStage === 8 && keys['2']) {
         dialogueOpen = true;
         dialogue.style.display = 'block';
-        dialogue.querySelector('strong').textContent = 'Benedict — A Different Path';
-        dialogueText.textContent = 'I respect a careful decision, Marcus. The invitation will remain open. Take time to understand what matters to you and the people here. We may speak again.';
+        dialogue.querySelector('strong').textContent = 'The Patron — A Different Path';
+        dialogueText.textContent = 'I respect a careful decision, Benedict. The invitation will remain open. Take time to understand what matters to you and the people here. We may speak again.';
         missionStage = 10;
-        objective.textContent = 'You declined for now. Continue helping the New Town community; Benedict’s invitation may return later.';
+        objective.textContent = 'You declined for now. Continue helping the New Town community; the Patron’s invitation may return later.';
       } else if (eDown && !eWasDown && dialogueOpen) {
         dialogueOpen = false;
         dialogue.style.display = 'none';

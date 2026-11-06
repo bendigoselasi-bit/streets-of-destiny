@@ -129,6 +129,57 @@
     addParkedCar(4.35, -29, 0x263e55);
     addParkedCar(-4.4, -51, 0x6d3330);
 
+    // Slow ambient traffic: simple original vehicles loop along the boulevard.
+    const traffic = [];
+    function addTrafficCar(x, z, color, speed, directionZ) {
+      const car = new THREE.Group();
+      const paint = new THREE.MeshStandardMaterial({ color, metalness: 0.48, roughness: 0.34 });
+      const glass = new THREE.MeshStandardMaterial({ color: 0x142b3a, metalness: 0.35, roughness: 0.2 });
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.58, 3.45), paint);
+      base.position.y = 0.65; base.castShadow = true; car.add(base);
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.62, 1.65), glass);
+      cabin.position.set(0, 1.18, -0.12); cabin.castShadow = true; car.add(cabin);
+      for (const wx of [-0.82, 0.82]) for (const wz of [-1.08, 1.08]) {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.29, 0.14, 12), new THREE.MeshStandardMaterial({ color: 0x11161b }));
+        wheel.rotation.z = Math.PI / 2; wheel.position.set(wx, 0.36, wz); car.add(wheel);
+      }
+      const lamps = new THREE.MeshBasicMaterial({ color: 0xffe3a6 });
+      for (const lx of [-0.53, 0.53]) {
+        const headlamp = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.13, 0.05), lamps);
+        headlamp.position.set(lx, 0.72, -1.74); car.add(headlamp);
+      }
+      car.position.set(x, 0, z); car.rotation.y = directionZ > 0 ? Math.PI : 0; scene.add(car);
+      traffic.push({ car, speed, directionZ });
+    }
+    addTrafficCar(-2.35, 43, 0x9a3d32, 3.2, -1);
+    addTrafficCar(2.25, -43, 0xc0a15e, 2.6, 1);
+    addTrafficCar(-2.35, -2, 0x31566b, 2.9, -1);
+
+    // A few neighbourhood pedestrians add life to the sidewalks.
+    const pedestrians = [];
+    function addPedestrian(x, z, shirt, phase) {
+      const person = new THREE.Group();
+      const skin = new THREE.MeshStandardMaterial({ color: 0x80543d, roughness: 0.9 });
+      const top = new THREE.MeshStandardMaterial({ color: shirt, roughness: 0.85 });
+      const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.62, 3, 7), top);
+      torso.position.y = 1.08; torso.castShadow = true; person.add(torso);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 12, 10), skin);
+      head.position.y = 1.72; head.castShadow = true; person.add(head);
+      const legMat = new THREE.MeshStandardMaterial({ color: 0x242a31, roughness: 0.95 });
+      const legs = [];
+      for (const side of [-1, 1]) {
+        const leg = new THREE.Group(); leg.position.set(side * 0.13, 0.75, 0); person.add(leg);
+        const limb = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.48, 3, 6), legMat);
+        limb.position.y = -0.27; limb.castShadow = true; leg.add(limb); legs.push(leg);
+      }
+      person.position.set(x, 0, z); scene.add(person);
+      pedestrians.push({ person, legs, phase, originX: x, originZ: z });
+    }
+    addPedestrian(-8.05, -16, 0x8a583c, 0.4);
+    addPedestrian(8.05, -34, 0x3c6870, 2.1);
+    addPedestrian(-8.05, 26, 0x9a873e, 3.4);
+    addPedestrian(8.05, 51, 0x644d82, 4.7);
+
     // Player placeholder
     const player = new THREE.Group();
     const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.48, 1.0, 4, 8), new THREE.MeshStandardMaterial({ color: 0x263d56 }));
@@ -365,6 +416,18 @@
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.04);
+      for (const vehicle of traffic) {
+        vehicle.car.position.z += vehicle.speed * vehicle.directionZ * dt;
+        if (vehicle.car.position.z > 74) vehicle.car.position.z = -74;
+        if (vehicle.car.position.z < -74) vehicle.car.position.z = 74;
+      }
+      for (const walker of pedestrians) {
+        walker.phase += dt * 3.2;
+        const stride = Math.sin(walker.phase) * 0.34;
+        walker.legs[0].rotation.x = stride;
+        walker.legs[1].rotation.x = -stride;
+        walker.person.position.x = walker.originX + Math.sin(walker.phase * 0.22) * 0.28;
+      }
       const forward = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
       const sideways = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
       const direction = new THREE.Vector3(sideways, 0, -forward).normalize().applyAxisAngle(new THREE.Vector3(0,1,0), yaw);

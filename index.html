@@ -135,6 +135,21 @@
     body.position.y = 1.15; body.castShadow = true; player.add(body);
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 12), new THREE.MeshStandardMaterial({ color: 0x8d5d43 }));
     head.position.y = 2.05; head.castShadow = true; player.add(head);
+
+    // Extra silhouette details give Marcus a more readable streetwear look.
+    const jacketMat = new THREE.MeshStandardMaterial({ color: 0x172b40, roughness: 0.72 });
+    const trimMat = new THREE.MeshStandardMaterial({ color: 0xc69a55, metalness: 0.28, roughness: 0.48 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: 0x17191d, roughness: 0.95 });
+    const jacketPanel = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.9, 0.18), jacketMat);
+    jacketPanel.position.set(0, 1.18, 0.39); jacketPanel.castShadow = true; player.add(jacketPanel);
+    const collar = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.2), trimMat);
+    collar.position.set(0, 1.72, 0.12); collar.castShadow = true; player.add(collar);
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.325, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.48), hairMat);
+    hair.position.set(0, 2.13, -0.015); hair.castShadow = true; player.add(hair);
+    const belt = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.1, 0.48), jacketMat);
+    belt.position.y = 0.68; belt.castShadow = true; player.add(belt);
+    const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.1, 0.04), trimMat);
+    buckle.position.set(0, 0.68, 0.25); player.add(buckle);
     player.position.set(0, 0, 12); scene.add(player);
 
     // Procedural third-person character rig: pivoted limbs allow a simple walk, idle,

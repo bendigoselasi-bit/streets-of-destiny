@@ -270,7 +270,8 @@
     let combatStarted = false, pulseCooldown = 0, playerFocus = 100, encounterWon = false;
     const pulseRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.08, 8, 40), new THREE.MeshBasicMaterial({ color: 0x69c9ef, transparent: true, opacity: 0 }));
     pulseRing.rotation.x = Math.PI / 2; pulseRing.position.y = 0.18; scene.add(pulseRing);
-\n    const keys = {};
+
+    const keys = {};
     addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
     addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
     let yaw = 0, dragging = false, lastX = 0;
@@ -298,8 +299,14 @@
       player.position.z = THREE.MathUtils.clamp(player.position.z, -72, 72);
       if (direction.lengthSq() > 0) player.rotation.y = Math.atan2(direction.x, direction.z);
       ring.rotation.z += dt * 0.7;
-      if (missionStage >= 3 && !encounterWon) {
-        combatStarted = true; combatPanel.style.display = 'block';
+      const inEncounterZone = player.position.z < -17 && player.position.z > -36;
+      if (missionStage >= 3 && inEncounterZone && !encounterWon) {
+        if (!combatStarted) {
+          combatStarted = true;
+          objective.textContent = 'A pair of rivals are blocking the street. Use J for a non-lethal action pulse and Shift to dodge.';
+          status.textContent = 'Street encounter — create space';
+        }
+        combatPanel.style.display = 'block';
         const combatStatus = document.getElementById('combatStatus');
         pulseCooldown = Math.max(0, pulseCooldown - dt);
         if (keys.j && pulseCooldown === 0) {

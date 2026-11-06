@@ -242,6 +242,30 @@
     bChest.position.set(0, 1.23, -0.42); bChest.castShadow = true; benedict.add(bChest);
     const bCore = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.62, 0.08), benedictBlue);
     bCore.position.set(0, 1.25, -0.53); benedict.add(bCore);
+
+    // Tailored executive details distinguish Benedict from the street characters.
+    const bMatte = new THREE.MeshStandardMaterial({ color: 0x090f18, roughness: 0.7 });
+    const bIvory = new THREE.MeshStandardMaterial({ color: 0xd8d0bd, roughness: 0.82 });
+    const bEye = new THREE.MeshStandardMaterial({ color: 0x17120f, roughness: 0.6 });
+    const lapelGeo = new THREE.BoxGeometry(0.22, 0.72, 0.1);
+    for (const side of [-1, 1]) {
+      const lapel = new THREE.Mesh(lapelGeo, benedictGold);
+      lapel.position.set(side * 0.2, 1.47, -0.56);
+      lapel.rotation.z = side * -0.34; lapel.castShadow = true; benedict.add(lapel);
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 0.62), bMatte);
+      shoe.position.set(side * 0.23, 0.12, 0.08); shoe.castShadow = true; benedict.add(shoe);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), bEye);
+      eye.position.set(side * 0.12, 2.1, -0.3); benedict.add(eye);
+    }
+    const tie = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.58, 0.07), bIvory);
+    tie.position.set(0, 1.38, -0.59); tie.castShadow = true; benedict.add(tie);
+    const knot = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.13, 0.1), benedictGold);
+    knot.position.set(0, 1.68, -0.58); benedict.add(knot);
+    const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.33, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.43), bMatte);
+    hairCap.position.set(0, 2.17, 0.015); hairCap.castShadow = true; benedict.add(hairCap);
+    const signet = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.13, 0.1), benedictGold);
+    signet.position.set(0.56, 1.05, -0.28); benedict.add(signet);
+
     for (const side of [-1, 1]) {
       const plate = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.65, 0.42), benedictGold);
       plate.position.set(side * 0.48, 1.12, -0.05); plate.rotation.z = side * -0.16; benedict.add(plate);

@@ -129,6 +129,32 @@
     addParkedCar(4.35, -29, 0x263e55);
     addParkedCar(-4.4, -51, 0x6d3330);
 
+    // Marcus's personal arcade-style vehicle. F enters/exits; WASD steers and moves.
+    const playerCar = new THREE.Group();
+    const carPaint = new THREE.MeshStandardMaterial({ color: 0x263f58, metalness: 0.68, roughness: 0.27 });
+    const carGlass = new THREE.MeshStandardMaterial({ color: 0x101f2b, metalness: 0.42, roughness: 0.16 });
+    const carTrim = new THREE.MeshStandardMaterial({ color: 0xb88743, metalness: 0.72, roughness: 0.3 });
+    const carBody = new THREE.Mesh(new THREE.BoxGeometry(1.95,0.62,4.05),carPaint);
+    carBody.position.y=0.72; carBody.castShadow=true; playerCar.add(carBody);
+    const carCabin = new THREE.Mesh(new THREE.BoxGeometry(1.62,0.78,2.0),carGlass);
+    carCabin.position.set(0,1.35,-0.18); carCabin.castShadow=true; playerCar.add(carCabin);
+    const hood = new THREE.Mesh(new THREE.BoxGeometry(1.8,0.12,1.0),carPaint);
+    hood.position.set(0,1.03,-1.42); playerCar.add(hood);
+    for(const wx of [-0.96,0.96]) for(const wz of [-1.35,1.35]) {
+      const wheel=new THREE.Mesh(new THREE.CylinderGeometry(0.38,0.38,0.2,16),new THREE.MeshStandardMaterial({color:0x11161b,roughness:1}));
+      wheel.rotation.z=Math.PI/2; wheel.position.set(wx,0.42,wz); playerCar.add(wheel);
+    }
+    for(const lx of [-0.62,0.62]) {
+      const lamp=new THREE.Mesh(new THREE.BoxGeometry(0.32,0.16,0.06),new THREE.MeshBasicMaterial({color:0xffe6ad}));
+      lamp.position.set(lx,0.78,-2.04); playerCar.add(lamp);
+      const tail=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.16,0.06),new THREE.MeshBasicMaterial({color:0xc83e35}));
+      tail.position.set(lx,0.78,2.04); playerCar.add(tail);
+    }
+    const stripe=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.025,3.5),carTrim);
+    stripe.position.set(0,1.05,0); playerCar.add(stripe);
+    playerCar.position.set(0,0,18); scene.add(playerCar);
+    let driving=false, carSpeed=0, carSteer=0;
+
     // Slow ambient traffic: simple original vehicles loop along the boulevard.
     const traffic = [];
     function addTrafficCar(x, z, color, speed, directionZ) {
@@ -464,11 +490,24 @@
       }
       const forward = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
       const sideways = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
-      const direction = new THREE.Vector3(sideways, 0, -forward).normalize().applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
-      const dodging = !!keys.shift;
-      player.position.addScaledVector(direction, dt * (dodging ? 10 : 7));
-      player.position.x = THREE.MathUtils.clamp(player.position.x, interiorMode ? roomX-6.2 : -5.5, interiorMode ? roomX+6.2 : 5.5);
-      player.position.z = THREE.MathUtils.clamp(player.position.z, interiorMode ? roomZ-6.2 : -72, interiorMode ? roomZ+6.2 : 72);
+      const dodging = !!keys.shift && !driving;
+      if (driving) {
+        carSpeed = THREE.MathUtils.clamp(carSpeed + forward * dt * 10, -5, 18);
+        if (!forward) carSpeed *= Math.pow(0.985, dt * 60);
+        playerCar.rotation.y += sideways * dt * (0.9 + Math.abs(carSpeed) * 0.035) * (carSpeed < 0 ? -1 : 1);
+        playerCar.position.x += Math.sin(playerCar.rotation.y) * carSpeed * dt;
+        playerCar.position.z -= Math.cos(playerCar.rotation.y) * carSpeed * dt;
+        playerCar.position.x = THREE.MathUtils.clamp(playerCar.position.x,-5.5,5.5);
+        playerCar.position.z = THREE.MathUtils.clamp(playerCar.position.z,-72,72);
+        player.position.copy(playerCar.position);
+        player.visible = false;
+        player.rotation.y = playerCar.rotation.y;
+      } else {
+        const direction = new THREE.Vector3(sideways, 0, -forward).normalize().applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+        player.position.addScaledVector(direction, dt * (dodging ? 10 : 7));
+        player.position.x = THREE.MathUtils.clamp(player.position.x, interiorMode ? roomX-6.2 : -5.5, interiorMode ? roomX+6.2 : 5.5);
+        player.position.z = THREE.MathUtils.clamp(player.position.z, interiorMode ? roomZ-6.2 : -72, interiorMode ? roomZ+6.2 : 72);
+      }
       const moving = direction.lengthSq() > 0.001;
       if (moving) player.rotation.y = Math.atan2(direction.x, direction.z);
       gaitTime += dt * (dodging ? 13 : 9);
@@ -556,7 +595,8 @@
       } else if (combatStarted && encounterWon) combatPanel.style.display = 'none';
 
       for (let i = 0; i < lampBulbs.length; i++) lampBulbs[i].material.color.setHex(Math.sin(clock.elapsedTime * 2.1 + i) > -0.92 ? 0xffd28a : 0xb77d48);
-      const target = player.position.clone().add(new THREE.Vector3(0, 3.2, 7.5).applyAxisAngle(new THREE.Vector3(0,1,0), yaw));
+      const cameraYaw = driving ? playerCar.rotation.y : yaw;
+      const target = player.position.clone().add(new THREE.Vector3(0, driving ? 4.2 : 3.2, driving ? 10 : 7.5).applyAxisAngle(new THREE.Vector3(0,1,0), cameraYaw));
       camera.position.lerp(target, 0.09);
       camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
       const nearAma = player.position.distanceTo(ama.position) < 3.2;
@@ -566,10 +606,13 @@
       const nearOffice = player.position.distanceTo(officeMarker.position) < 3.4;
       const nearNana = player.position.distanceTo(nana.position) < 3.2;
       const nearMeeting = player.position.distanceTo(meetingMarker.position) < 3.4;
+      const nearPlayerCar = !driving && !interiorMode && player.position.distanceTo(playerCar.position) < 3.8;
       const nearMarket = !interiorMode && player.position.distanceTo(marketMarker.position) < 3.2;
       const nearCafe = !interiorMode && player.position.distanceTo(cafeMarker.position) < 3.2;
       const eDown = !!keys.e;
-      if (interiorMode) status.textContent = 'Inside ' + (interiorMode==='market'?'New Town Market':'Harbour Cafe') + ' — press E to exit';
+      if (driving) status.textContent = 'Driving Marcus’s car — W/S accelerate and reverse · A/D steer · F exit';
+      else if (nearPlayerCar) status.textContent = 'Marcus’s car — press F to drive';
+      else if (interiorMode) status.textContent = 'Inside ' + (interiorMode==='market'?'New Town Market':'Harbour Cafe') + ' — press E to exit';
       else if (nearMarket) status.textContent = 'New Town Market — press E to enter';
       else if (nearCafe) status.textContent = 'Harbour Cafe — press E to enter';
       else if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
@@ -585,7 +628,16 @@
       else if (missionStage === 10) status.textContent = 'You declined Benedict’s invitation';
       else status.textContent = 'Explore the neighbourhood';
 
-      if (interiorMode && eDown && !eWasDown) {
+      if (keys.f && !driving && nearPlayerCar) {
+        driving = true; carSpeed = 0; playerCar.position.set(player.position.x,0,player.position.z);
+        playerCar.rotation.y = player.rotation.y; player.visible = false;
+        status.textContent = 'Driving Marcus’s car — W/S accelerate and reverse · A/D steer · F exit';
+        keys.f = false;
+      } else if (keys.f && driving) {
+        driving = false; carSpeed = 0; player.visible = true;
+        player.position.set(THREE.MathUtils.clamp(playerCar.position.x+1.5,-5.2,5.2),0,playerCar.position.z);
+        keys.f = false;
+      } else if (interiorMode && eDown && !eWasDown) {
         const wasMarket = interiorMode === 'market';
         interiorMode = ''; marketRoom.visible = false; cafeRoom.visible = false;
         player.position.set(wasMarket ? 4.1 : -4.1, 0, wasMarket ? 15.2 : -39.8);

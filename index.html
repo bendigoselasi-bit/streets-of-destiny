@@ -172,6 +172,16 @@
     nanaHead.position.y = 1.92; nana.add(nanaHead);
     nana.position.set(1.8, 0, -67); scene.add(nana);
 
+
+    // Private meeting point overlooking the waterfront.
+    box(9, 0.35, 8, 0x28343b, 0, 0.22, -70);
+    box(9.4, 0.25, 8.4, 0x151e25, 0, 4.1, -70);
+    for (const x of [-4.2, 4.2]) box(0.22, 4, 0.22, 0xb88739, x, 2.1, -70);
+    const meetingMarker = new THREE.Group();
+    const meetingRing = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.12, 8, 32), new THREE.MeshStandardMaterial({ color: 0xffc45c, emissive: 0x80501a }));
+    meetingRing.rotation.x = Math.PI / 2; meetingRing.position.y = 0.22; meetingMarker.add(meetingRing);
+    meetingMarker.position.set(0, 0, -70); scene.add(meetingMarker);
+
     const keys = {};
     addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
     addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
@@ -208,6 +218,7 @@
       const nearBenedict = player.position.distanceTo(benedict.position) < 3.5;
       const nearOffice = player.position.distanceTo(officeMarker.position) < 3.4;
       const nearNana = player.position.distanceTo(nana.position) < 3.2;
+      const nearMeeting = player.position.distanceTo(meetingMarker.position) < 3.4;
       const eDown = !!keys.e;
       if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
       else if (nearWorkshop && missionStage === 1) status.textContent = 'Community workshop — press E to enter';
@@ -216,7 +227,10 @@
       else if (nearAma && missionStage === 4) status.textContent = 'Ask Ama about Benedict — press E';
       else if (nearOffice && missionStage === 5) status.textContent = 'Benedict’s waterfront office — press E';
       else if (nearNana && missionStage === 6) status.textContent = 'Nana is ready to speak — press E';
-      else if (missionStage === 7) status.textContent = 'You have a meeting to consider';
+      else if (nearMeeting && missionStage === 7) status.textContent = 'Benedict’s private meeting — press E';
+      else if (missionStage === 8) status.textContent = 'Choose: press 1 to hear him out or 2 to decline';
+      else if (missionStage === 9) status.textContent = 'Benedict has shared a confidential proposal';
+      else if (missionStage === 10) status.textContent = 'You declined Benedict’s invitation';
       else status.textContent = 'Explore the neighbourhood';
 
       if (nearAma && eDown && !eWasDown && missionStage === 0) {
@@ -269,6 +283,29 @@
         dialogueText.textContent = 'You must be Marcus. Mr Benedict said you might come by. He is away at the moment, but he left a message: he would like to meet you privately tomorrow. I cannot tell you what he wants. You will have to ask him yourself.';
         missionStage = 7;
         objective.textContent = 'New objective: Decide whether to accept Benedict’s invitation. Chapter 1 continues.';
+      } else if (nearMeeting && eDown && !eWasDown && missionStage === 7) {
+        benedict.position.set(2.7, 0, -69);
+        benedict.rotation.y = Math.PI;
+        dialogueOpen = true;
+        dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'Benedict — Private Meeting';
+        dialogueText.textContent = 'Marcus, I have watched how you returned to this neighbourhood and listened before making promises. I am putting together a city renewal initiative. I want you involved, but trust should never be demanded. You have a choice: hear my proposal, or walk away. Press 1 to hear him out, or 2 to decline.';
+        missionStage = 8;
+        objective.textContent = 'Decision: Will Marcus hear Benedict’s proposal or decline the invitation?';
+      } else if (missionStage === 8 && keys['1']) {
+        dialogueOpen = true;
+        dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'Benedict — The Proposal';
+        dialogueText.textContent = 'Good. I want to restore the waterfront and create paid training opportunities through the workshop. The plan is ambitious, and I will show you the details before asking for any commitment. Meet me again when you are ready to review them.';
+        missionStage = 9;
+        objective.textContent = 'New objective: Review Benedict’s waterfront renewal proposal before making any commitment.';
+      } else if (missionStage === 8 && keys['2']) {
+        dialogueOpen = true;
+        dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'Benedict — A Different Path';
+        dialogueText.textContent = 'I respect a careful decision, Marcus. The invitation will remain open. Take time to understand what matters to you and the people here. We may speak again.';
+        missionStage = 10;
+        objective.textContent = 'You declined for now. Continue helping the New Town community; Benedict’s invitation may return later.';
       } else if (eDown && !eWasDown && dialogueOpen) {
         dialogueOpen = false;
         dialogue.style.display = 'none';

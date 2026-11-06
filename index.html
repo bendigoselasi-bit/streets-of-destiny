@@ -534,6 +534,8 @@
     const bendigoPantsMat = new THREE.MeshStandardMaterial({color:0x202a30,roughness:0.9});
     const bendigoShoeMat = new THREE.MeshStandardMaterial({color:0x111519,roughness:0.72});
     const bendigoArms = [], bendigoLegs = [];
+    let bendigoGestureTime = 0;
+    let patronGestureTime = 0;
     for (const side of [-1,1]) {
       const armPivot = new THREE.Group(); armPivot.position.set(side*0.48,1.52,0.28); bendigo.add(armPivot);
       const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.115,0.145,0.78,9),new THREE.MeshStandardMaterial({color:0x80543d,roughness:0.9}));
@@ -855,6 +857,19 @@
 
       for (let i = 0; i < lampBulbs.length; i++) lampBulbs[i].material.color.setHex(Math.sin(clock.elapsedTime * 2.1 + i) > -0.92 ? 0xffd28a : 0xb77d48);
       const cameraYaw = driving ? playerCar.rotation.y : yaw;
+      const speakerName = dialogue.querySelector('strong').textContent;
+      const bendigoSpeaking = dialogueOpen && speakerName.startsWith('Bendigo');
+      const patronSpeaking = dialogueOpen && speakerName.startsWith('The Patron');
+      bendigoGestureTime += dt * (bendigoSpeaking ? 4.2 : 1.1);
+      const gestureBlend = bendigoSpeaking ? 1 : 0;
+      const gestureWave = Math.sin(bendigoGestureTime);
+      bendigoArms[0].rotation.z = THREE.MathUtils.lerp(bendigoArms[0].rotation.z, gestureBlend * (0.22 + Math.max(0,gestureWave)*0.48), Math.min(1,dt*5));
+      bendigoArms[1].rotation.z = THREE.MathUtils.lerp(bendigoArms[1].rotation.z, gestureBlend * (-0.16 - Math.max(0,-gestureWave)*0.34), Math.min(1,dt*5));
+      bendigoHead.rotation.x = THREE.MathUtils.lerp(bendigoHead.rotation.x, bendigoSpeaking ? Math.sin(bendigoGestureTime*0.72)*0.09 : 0, Math.min(1,dt*4));
+      bendigoBody.rotation.z = THREE.MathUtils.lerp(bendigoBody.rotation.z, bendigoSpeaking ? Math.sin(bendigoGestureTime*0.5)*0.035 : 0, Math.min(1,dt*4));
+      patronGestureTime += dt * (patronSpeaking ? 2.4 : 0.8);
+      benedict.rotation.z = THREE.MathUtils.lerp(benedict.rotation.z, patronSpeaking ? Math.sin(patronGestureTime)*0.025 : 0, Math.min(1,dt*3));
+      bHead.rotation.x = THREE.MathUtils.lerp(bHead.rotation.x, patronSpeaking ? Math.sin(patronGestureTime*0.55)*0.055 : 0, Math.min(1,dt*3));
       const inCinematic = dialogueOpen && !interiorMode && !driving;
       const target = player.position.clone().add(new THREE.Vector3(0, inCinematic ? 2.65 : driving ? 4.2 : 3.2, inCinematic ? 5.6 : driving ? 10 : 7.5).applyAxisAngle(new THREE.Vector3(0,1,0), cameraYaw));
       camera.position.lerp(target, inCinematic ? 0.055 : 0.09);

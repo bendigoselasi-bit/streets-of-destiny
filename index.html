@@ -180,6 +180,40 @@
     addPedestrian(-8.05, 26, 0x9a873e, 3.4);
     addPedestrian(8.05, 51, 0x644d82, 4.7);
 
+    // Enterable neighbourhood market and waterfront cafe.
+    function businessMarker(x,z,color) {
+      box(2.8,2.8,0.22,color,x,1.4,z-1.15); box(3.1,0.22,1.15,0x26343b,x,2.9,z-1.1);
+      box(2.35,0.95,0.18,0x172c39,x,1.25,z-0.99);
+      const g=new THREE.Group(); const ring=new THREE.Mesh(new THREE.TorusGeometry(0.9,0.1,8,28),new THREE.MeshStandardMaterial({color:0xffd16c,emissive:0x79501c}));
+      ring.rotation.x=Math.PI/2; ring.position.y=0.16; g.add(ring); g.position.set(x,0,z+1.2); scene.add(g); return g;
+    }
+    const marketMarker=businessMarker(4.1,12,0x9b6241), cafeMarker=businessMarker(-4.1,-43,0x315b66);
+    const roomX=100, roomZ=100;
+    function roomPart(parent,w,h,d,color,x,y,z) {
+      const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:0.85}));
+      m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; parent.add(m); return m;
+    }
+    function makeRoom(wallColor,floorColor,isCafe) {
+      const g=new THREE.Group(); scene.add(g); g.visible=false;
+      roomPart(g,15,0.35,15,floorColor,roomX,-0.18,roomZ);
+      roomPart(g,15,5,0.35,wallColor,roomX,2.3,roomZ-7.4);
+      roomPart(g,15,5,0.35,wallColor,roomX,2.3,roomZ+7.4);
+      roomPart(g,0.35,5,15,wallColor,roomX-7.4,2.3,roomZ);
+      roomPart(g,0.35,5,15,wallColor,roomX+7.4,2.3,roomZ);
+      roomPart(g,5.8,1.1,1.3,0x4a3022,roomX,0.55,roomZ-3.8);
+      if(isCafe) {
+        for(const [x,z] of [[-3,-1],[3,-1],[-3,3],[3,3]]) {
+          roomPart(g,1.5,0.14,1.5,0xb88750,roomX+x,0.9,roomZ+z);
+          roomPart(g,0.18,0.85,0.18,0x282c30,roomX+x,0.43,roomZ+z);
+        }
+      } else {
+        roomPart(g,5.5,2.1,0.45,0x293f49,roomX,1.6,roomZ-6.9);
+        for(let n=0;n<4;n++) roomPart(g,0.8,0.7,0.6,[0xc58a45,0x688b73,0x9b5945,0x54758a][n],roomX-4.2+n*2.8,1.2,roomZ-6.55);
+      }
+      return g;
+    }
+    const marketRoom=makeRoom(0x9b7958,0x6a5948,false), cafeRoom=makeRoom(0x324c57,0x4e4942,true);
+    let interiorMode='';
     // Player placeholder
     const player = new THREE.Group();
     const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.48, 1.0, 4, 8), new THREE.MeshStandardMaterial({ color: 0x263d56 }));
@@ -433,8 +467,8 @@
       const direction = new THREE.Vector3(sideways, 0, -forward).normalize().applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
       const dodging = !!keys.shift;
       player.position.addScaledVector(direction, dt * (dodging ? 10 : 7));
-      player.position.x = THREE.MathUtils.clamp(player.position.x, -5.5, 5.5);
-      player.position.z = THREE.MathUtils.clamp(player.position.z, -72, 72);
+      player.position.x = THREE.MathUtils.clamp(player.position.x, interiorMode ? roomX-6.2 : -5.5, interiorMode ? roomX+6.2 : 5.5);
+      player.position.z = THREE.MathUtils.clamp(player.position.z, interiorMode ? roomZ-6.2 : -72, interiorMode ? roomZ+6.2 : 72);
       const moving = direction.lengthSq() > 0.001;
       if (moving) player.rotation.y = Math.atan2(direction.x, direction.z);
       gaitTime += dt * (dodging ? 13 : 9);
@@ -532,8 +566,13 @@
       const nearOffice = player.position.distanceTo(officeMarker.position) < 3.4;
       const nearNana = player.position.distanceTo(nana.position) < 3.2;
       const nearMeeting = player.position.distanceTo(meetingMarker.position) < 3.4;
+      const nearMarket = !interiorMode && player.position.distanceTo(marketMarker.position) < 3.2;
+      const nearCafe = !interiorMode && player.position.distanceTo(cafeMarker.position) < 3.2;
       const eDown = !!keys.e;
-      if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
+      if (interiorMode) status.textContent = 'Inside ' + (interiorMode==='market'?'New Town Market':'Harbour Cafe') + ' — press E to exit';
+      else if (nearMarket) status.textContent = 'New Town Market — press E to enter';
+      else if (nearCafe) status.textContent = 'Harbour Cafe — press E to enter';
+      else if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
       else if (nearWorkshop && missionStage === 1) status.textContent = 'Community workshop — press E to enter';
       else if (nearKofi && missionStage === 2) status.textContent = 'Kofi is ready to talk — press E';
       else if (nearBenedict && missionStage === 3) status.textContent = 'A stranger is waiting — press E';
@@ -546,7 +585,24 @@
       else if (missionStage === 10) status.textContent = 'You declined Benedict’s invitation';
       else status.textContent = 'Explore the neighbourhood';
 
-      if (nearAma && eDown && !eWasDown && missionStage === 0) {
+      if (interiorMode && eDown && !eWasDown) {
+        const wasMarket = interiorMode === 'market';
+        interiorMode = ''; marketRoom.visible = false; cafeRoom.visible = false;
+        player.position.set(wasMarket ? 4.1 : -4.1, 0, wasMarket ? 15.2 : -39.8);
+        dialogueOpen = false; dialogue.style.display = 'none';
+      } else if (nearMarket && eDown && !eWasDown) {
+        interiorMode='market'; marketRoom.visible=true; cafeRoom.visible=false;
+        player.position.set(roomX,0,roomZ+5.2);
+        dialogueOpen=true; dialogue.style.display='block';
+        dialogue.querySelector('strong').textContent='New Town Market';
+        dialogueText.textContent='Welcome to the neighbourhood market. Local goods and everyday essentials line the shelves. Press E whenever you are ready to step outside.';
+      } else if (nearCafe && eDown && !eWasDown) {
+        interiorMode='cafe'; cafeRoom.visible=true; marketRoom.visible=false;
+        player.position.set(roomX,0,roomZ+5.2);
+        dialogueOpen=true; dialogue.style.display='block';
+        dialogue.querySelector('strong').textContent='Harbour Cafe';
+        dialogueText.textContent='A calm little cafe near the waterfront, with tables for neighbours to catch up. Press E to leave and return to New Town.';
+      } else if (nearAma && eDown && !eWasDown && missionStage === 0) {
         dialogueOpen = true;
         dialogue.style.display = 'block';
         dialogue.querySelector('strong').textContent = 'Ama';

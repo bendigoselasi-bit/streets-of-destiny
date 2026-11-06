@@ -152,6 +152,42 @@
     }
     const stripe=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.025,3.5),carTrim);
     stripe.position.set(0,1.05,0); playerCar.add(stripe);
+    const roofRack = new THREE.Group();
+    for (const x of [-0.62,0.62]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,1.9),carTrim);
+      rail.position.set(x,1.86,-0.18); roofRack.add(rail);
+    }
+    playerCar.add(roofRack);
+    const sportSpoiler = new THREE.Group();
+    const spoilerBar = new THREE.Mesh(new THREE.BoxGeometry(1.75,0.1,0.22),carTrim);
+    spoilerBar.position.set(0,1.52,1.85); sportSpoiler.add(spoilerBar);
+    for (const x of [-0.62,0.62]) {
+      const support = new THREE.Mesh(new THREE.BoxGeometry(0.09,0.34,0.1),carTrim);
+      support.position.set(x,1.34,1.83); sportSpoiler.add(support);
+    }
+    playerCar.add(sportSpoiler);
+    roofRack.visible=false; sportSpoiler.visible=false;
+    const vehicleTypes=[
+      {name:'Executive Sedan',unlock:0,maxSpeed:18,body:new THREE.BoxGeometry(1.95,0.62,4.05),cabin:new THREE.BoxGeometry(1.62,0.78,2.0),bodyY:0.72,cabinY:1.35,hoodY:1.03,hoodZ:-1.42},
+      {name:'City SUV',unlock:5,maxSpeed:15,body:new THREE.BoxGeometry(2.02,0.78,4.15),cabin:new THREE.BoxGeometry(1.72,0.96,2.15),bodyY:0.8,cabinY:1.55,hoodY:1.2,hoodZ:-1.48},
+      {name:'Sport Coupe',unlock:8,maxSpeed:22,body:new THREE.BoxGeometry(1.98,0.55,4.1),cabin:new THREE.BoxGeometry(1.65,0.58,1.65),bodyY:0.68,cabinY:1.2,hoodY:0.98,hoodZ:-1.46}
+    ];
+    let selectedVehicle=0;
+    function selectVehicle(index) {
+      const type=vehicleTypes[index];
+      if (missionStage < type.unlock) {
+        dialogueText.textContent=type.name+' is locked. Continue the story to unlock it.';
+        status.textContent=type.name+' locked — progress through the story';
+        return;
+      }
+      selectedVehicle=index;
+      carBody.geometry.dispose(); carBody.geometry=type.body.clone(); carBody.position.y=type.bodyY;
+      carCabin.geometry.dispose(); carCabin.geometry=type.cabin.clone(); carCabin.position.y=type.cabinY;
+      hood.position.y=type.hoodY; hood.position.z=type.hoodZ;
+      roofRack.visible=index===1; sportSpoiler.visible=index===2;
+      status.textContent='Garage: '+type.name+' selected';
+      dialogueText.textContent=type.name+' selected. Choose a paint finish with 1–4, or press E to leave.';
+    }
     playerCar.position.set(0,0,18); scene.add(playerCar);
     let driving=false, carSpeed=0, carSteer=0;
 
@@ -514,7 +550,7 @@
       const sideways = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
       const dodging = !!keys.shift && !driving;
       if (driving) {
-        carSpeed = THREE.MathUtils.clamp(carSpeed + forward * dt * 10, -5, 18);
+        carSpeed = THREE.MathUtils.clamp(carSpeed + forward * dt * 10, -5, vehicleTypes[selectedVehicle].maxSpeed);
         if (!forward) carSpeed *= Math.pow(0.985, dt * 60);
         playerCar.rotation.y += sideways * dt * (0.9 + Math.abs(carSpeed) * 0.035) * (carSpeed < 0 ? -1 : 1);
         playerCar.position.x += Math.sin(playerCar.rotation.y) * carSpeed * dt;
@@ -672,10 +708,14 @@
         applyGaragePaint(2); keys['3']=false;
       } else if (garageOpen && keys['4']) {
         applyGaragePaint(3); keys['4']=false;
+      } else if (garageOpen && keys['5']) {
+        selectVehicle(1); keys['5']=false;
+      } else if (garageOpen && keys['6']) {
+        selectVehicle(2); keys['6']=false;
       } else if (nearGarage && eDown && !eWasDown) {
         garageOpen=true; dialogueOpen=true; dialogue.style.display='block';
         dialogue.querySelector('strong').textContent='New Town Garage';
-        dialogueText.textContent='Give Marcus’s car a fresh finish. Press 1 for Midnight Blue, 2 for Obsidian Black, 3 for Burgundy, or 4 for Pearl Silver. Press E to close.';
+        dialogueText.textContent='Choose a vehicle: 1 Sedan (available), 5 SUV (unlocks at story chapter 5), 6 Sport Coupe (unlocks at chapter 8). Paint: 1 Blue, 2 Black, 3 Burgundy, 4 Silver. Press E to close.';
       } else if (interiorMode && eDown && !eWasDown) {
         const wasMarket = interiorMode === 'market';
         interiorMode = ''; marketRoom.visible = false; cafeRoom.visible = false;

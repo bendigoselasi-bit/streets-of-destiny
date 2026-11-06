@@ -17,6 +17,7 @@
 </head>
 <body>
   <div id="hud"><strong>STREETS OF DESTINY</strong><br>CINEMATIC BUILD · NEW TOWN DISTRICT<br><span id="status">Explore the neighbourhood</span></div>
+  <div id="savePanel" style="position:fixed;top:112px;left:18px;z-index:3;display:flex;gap:7px"><button id="saveGame" style="padding:9px 12px;background:#14283a;color:#f5e7c8;border:1px solid #c99a4a;border-radius:3px;cursor:pointer">SAVE GAME</button><button id="loadGame" style="padding:9px 12px;background:#14283a;color:#f5e7c8;border:1px solid #c99a4a;border-radius:3px;cursor:pointer">LOAD GAME</button></div>
   <div id="hint">WASD / Arrows: move · Mouse drag: look · E: interact · F: enter/exit car · J: action pulse · Shift: dodge</div>
   <div id="mission" style="position:fixed;top:18px;right:18px;z-index:2;max-width:260px;padding:12px 16px;border:1px solid #ffffff33;border-radius:10px;background:#101820cc;line-height:1.5"><strong>FIRST MEETING</strong><br><span id="objective">Find Ama near the meeting point.</span></div>
   <div id="dialogue" style="display:none;position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:3;width:min(520px,calc(100% - 40px));padding:16px 18px;border:1px solid #ffffff55;border-radius:12px;background:#101820f2;line-height:1.55;text-align:center"><strong>Ama</strong><br><span id="dialogueText"></span><br><small>Press E to close</small></div>
@@ -207,6 +208,7 @@
       {name:'Pearl Silver',body:0x9da9b1,trim:0xd6b36e,glass:0x263b49}
     ];
     function applyGaragePaint(index) {
+      savedPaint=index;
       const paint=garagePaints[index];
       carPaint.color.setHex(paint.body); carTrim.color.setHex(paint.trim); carGlass.color.setHex(paint.glass);
       status.textContent='Garage: '+paint.name+' selected';
@@ -546,12 +548,61 @@
     const dialogue = document.getElementById('dialogue');
     const dialogueText = document.getElementById('dialogueText');
     let missionStage = 0;
+    let savedPaint = 0;
+    const SAVE_KEY = 'streetsOfDestiny.save.v1';
+    function saveGame(showMessage=true) {
+      const data = {
+        version: 1, missionStage, selectedVehicle, savedPaint,
+        player: {x: player.position.x, z: player.position.z, yaw: player.rotation.y},
+        car: {x: playerCar.position.x, z: playerCar.position.z, yaw: playerCar.rotation.y}
+      };
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        if(showMessage) status.textContent = 'Game saved on this device';
+        return true;
+      } catch (error) {
+        if(showMessage) status.textContent = 'Save unavailable in this browser';
+        return false;
+      }
+    }
+    function loadGame(showMessage=true) {
+      try {
+        const raw=localStorage.getItem(SAVE_KEY);
+        if(!raw) { if(showMessage) status.textContent='No saved game found on this device'; return false; }
+        const data=JSON.parse(raw);
+        if(data.version!==1) throw new Error('Unsupported save version');
+        missionStage=THREE.MathUtils.clamp(Number(data.missionStage)||0,0,10);
+        selectedVehicle=0;
+        selectVehicle(THREE.MathUtils.clamp(Number(data.selectedVehicle)||0,0,2));
+        savedPaint=THREE.MathUtils.clamp(Number(data.savedPaint)||0,0,3);
+        applyGaragePaint(savedPaint);
+        player.position.set(
+          THREE.MathUtils.clamp(Number(data.player?.x)||0,-5.5,5.5),0,
+          THREE.MathUtils.clamp(Number(data.player?.z)||0,-72,72)
+        );
+        player.rotation.y=Number(data.player?.yaw)||0;
+        playerCar.position.set(
+          THREE.MathUtils.clamp(Number(data.car?.x)||0,-5.5,5.5),0,
+          THREE.MathUtils.clamp(Number(data.car?.z)||18,-72,72)
+        );
+        playerCar.rotation.y=Number(data.car?.yaw)||0;
+        objective.textContent = missionStage===0 ? 'Find Ama near the meeting point.' : 'Story progress restored. Continue your journey.';
+        if(showMessage) status.textContent='Saved game loaded — welcome back to New Town';
+        return true;
+      } catch(error) {
+        if(showMessage) status.textContent='Save could not be loaded; start a new journey';
+        return false;
+      }
+    }
+    document.getElementById('saveGame').addEventListener('click',()=>saveGame(true));
+    document.getElementById('loadGame').addEventListener('click',()=>loadGame(true));
     let dialogueOpen = false;
     let eWasDown = false;
     const clock = new THREE.Clock();
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.04);
+      if (Math.floor(clock.elapsedTime) % 12 === 0 && clock.elapsedTime % 1 < dt) saveGame(false);
       for (const vehicle of traffic) {
         vehicle.car.position.z += vehicle.speed * vehicle.directionZ * dt;
         if (vehicle.car.position.z > 74) vehicle.car.position.z = -74;
@@ -840,6 +891,8 @@
       eWasDown = eDown;
       renderer.render(scene, camera);
     }
+    loadGame(false);
+    addEventListener('beforeunload',()=>saveGame(false));
     animate();
     addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
   </script>

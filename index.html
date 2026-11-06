@@ -5,14 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>STREETS OF DESTINY — Prototype</title>
   <style>
-    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #111820; color: #fff; font-family: system-ui, sans-serif; }
-    #hud { position: fixed; inset: 18px auto auto 18px; z-index: 2; padding: 12px 16px; border: 1px solid #ffffff33; border-radius: 10px; background: #101820cc; line-height: 1.5; }
-    #hint { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 2; padding: 10px 14px; border-radius: 8px; background: #101820dd; color: #e9edf0; white-space: nowrap; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #07121d; color: #f6ead2; font-family: Georgia, 'Times New Roman', serif; }
+    #hud, #mission { color: #f5e7c8; border: 1px solid #c99a4a88 !important; border-radius: 3px !important; background: linear-gradient(135deg, #071522ed, #152638df) !important; box-shadow: 0 12px 36px #0008, inset 0 0 22px #d4a04b12; letter-spacing: .03em; backdrop-filter: blur(10px); }
+    #hud strong, #mission strong { color: #e5b65e; letter-spacing: .16em; font-size: 12px; }
+    #hint { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 2; padding: 10px 16px; border: 1px solid #c99a4a77; border-radius: 3px; background: #071522e8; color: #f5e7c8; white-space: nowrap; font: 12px system-ui, sans-serif; letter-spacing: .08em; }
+    #dialogue { border: 1px solid #d5a44e !important; border-radius: 3px !important; background: linear-gradient(135deg, #071522f5, #1a2b3af5) !important; color: #f5e7c8; box-shadow: 0 16px 50px #000b; }
+    #dialogue strong { color: #e5b65e; letter-spacing: .14em; text-transform: uppercase; }
+    body:after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at center, transparent 48%, #02081299 100%), linear-gradient(0deg, #02081244, transparent 28%, transparent 75%, #02081233); }
     canvas { display: block; }
   </style>
 </head>
 <body>
-  <div id="hud"><strong>STREETS OF DESTINY</strong><br>Prototype 0.6 · New Town District<br><span id="status">Explore the neighbourhood</span></div>
+  <div id="hud"><strong>STREETS OF DESTINY</strong><br>CINEMATIC BUILD · NEW TOWN DISTRICT<br><span id="status">Explore the neighbourhood</span></div>
   <div id="hint">WASD / Arrow keys: move · Mouse drag: look around · E: interact</div>
   <div id="mission" style="position:fixed;top:18px;right:18px;z-index:2;max-width:260px;padding:12px 16px;border:1px solid #ffffff33;border-radius:10px;background:#101820cc;line-height:1.5"><strong>FIRST MEETING</strong><br><span id="objective">Find Ama near the meeting point.</span></div>
   <div id="dialogue" style="display:none;position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:3;width:min(520px,calc(100% - 40px));padding:16px 18px;border:1px solid #ffffff55;border-radius:12px;background:#101820f2;line-height:1.55;text-align:center"><strong>Ama</strong><br><span id="dialogueText"></span><br><small>Press E to close</small></div>
@@ -20,21 +24,28 @@
     import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x9bb6c5);
-    scene.fog = new THREE.Fog(0x9bb6c5, 35, 115);
+    scene.background = new THREE.Color(0x182b40);
+    scene.fog = new THREE.Fog(0x182b40, 42, 125);
 
     const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 250);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.setSize(innerWidth, innerHeight);
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
     document.body.appendChild(renderer.domElement);
 
-    scene.add(new THREE.HemisphereLight(0xddeeff, 0x59604c, 2.1));
-    const sun = new THREE.DirectionalLight(0xffe0b0, 2.3);
-    sun.position.set(-18, 32, 16);
+    scene.add(new THREE.HemisphereLight(0x9bb9df, 0x1b2028, 1.25));
+    const sun = new THREE.DirectionalLight(0xffc77a, 2.8);
+    sun.position.set(-22, 28, 18);
     sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -45; sun.shadow.camera.right = 45; sun.shadow.camera.top = 45; sun.shadow.camera.bottom = -45;
     scene.add(sun);
+    const waterfrontGlow = new THREE.PointLight(0x4b9fc9, 18, 42, 2);
+    waterfrontGlow.position.set(-9, 8, -72); scene.add(waterfrontGlow);
 
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(180, 180), new THREE.MeshStandardMaterial({ color: 0x687568 }));
     ground.rotation.x = -Math.PI / 2;
@@ -51,6 +62,14 @@
     box(2.2, 0.2, 150, 0x9b9788, -7.6, 0.12, 0);
     box(2.2, 0.2, 150, 0x9b9788, 7.6, 0.12, 0);
     for (let z = -65; z < 70; z += 10) box(0.16, 0.025, 4.5, 0xe7d9a6, 0, 0.14, z);
+
+    // Dark waterfront reflecting the blue-and-gold city lighting.
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(110, 38), new THREE.MeshStandardMaterial({ color: 0x102d42, metalness: 0.72, roughness: 0.22, emissive: 0x061725 }));
+    water.rotation.x = -Math.PI / 2; water.position.set(-8, 0.025, -91); scene.add(water);
+    for (let i = 0; i < 12; i++) {
+      const glint = new THREE.Mesh(new THREE.BoxGeometry(0.08 + (i % 3) * 0.08, 0.015, 1.8 + (i % 4) * 0.6), new THREE.MeshBasicMaterial({ color: i % 2 ? 0x3b8fb4 : 0xc58c45, transparent: true, opacity: 0.28 }));
+      glint.position.set(-26 + i * 3.2, 0.06, -88 - (i % 3) * 2.5); water.add(glint);
+    }
 
     // Original fictional neighbourhood blocks
     const palette = [0xb77b55, 0xc8b28a, 0x8d9a91, 0xd0c4aa, 0x9d6958, 0xb5a18a];

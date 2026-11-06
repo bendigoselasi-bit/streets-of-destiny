@@ -149,6 +149,29 @@
     benedict.rotation.y = Math.PI;
     scene.add(benedict);
 
+
+    // Benedict's waterfront office: a compact, explorable-feeling exterior landmark.
+    box(8, 7, 7, 0x39434a, -12.5, 3.5, -65);
+    box(8.3, 0.4, 7.3, 0x171e26, -12.5, 7.2, -65);
+    box(2.1, 3.2, 0.18, 0x172d3a, -12.5, 1.7, -61.4);
+    box(1.1, 1.35, 0.12, 0x42a9c2, -15.1, 4.2, -61.35);
+    box(1.1, 1.35, 0.12, 0x42a9c2, -9.9, 4.2, -61.35);
+    box(4.2, 0.8, 0.25, 0xb88739, -12.5, 5.7, -61.25);
+    const officeMarker = new THREE.Group();
+    const officeRing = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.12, 8, 32), new THREE.MeshStandardMaterial({ color: 0x64c9ff, emissive: 0x164a78 }));
+    officeRing.rotation.x = Math.PI / 2; officeRing.position.y = 0.22; officeMarker.add(officeRing);
+    const officeBeam = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.5, 12), new THREE.MeshBasicMaterial({ color: 0x64c9ff, transparent: true, opacity: 0.48 }));
+    officeBeam.position.y = 1.55; officeMarker.add(officeBeam);
+    officeMarker.position.set(-4.4, 0, -65); scene.add(officeMarker);
+
+    // Nana, the office coordinator. She is the first person Marcus meets at the waterfront office.
+    const nana = new THREE.Group();
+    const nanaBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.92, 4, 8), new THREE.MeshStandardMaterial({ color: 0x7650a2 }));
+    nanaBody.position.y = 1.08; nana.add(nanaBody);
+    const nanaHead = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), new THREE.MeshStandardMaterial({ color: 0x80543d }));
+    nanaHead.position.y = 1.92; nana.add(nanaHead);
+    nana.position.set(1.8, 0, -67); scene.add(nana);
+
     const keys = {};
     addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
     addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
@@ -183,13 +206,17 @@
       const nearWorkshop = player.position.distanceTo(workshopMarker.position) < 3.4;
       const nearKofi = player.position.distanceTo(kofi.position) < 3.2;
       const nearBenedict = player.position.distanceTo(benedict.position) < 3.5;
+      const nearOffice = player.position.distanceTo(officeMarker.position) < 3.4;
+      const nearNana = player.position.distanceTo(nana.position) < 3.2;
       const eDown = !!keys.e;
       if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
       else if (nearWorkshop && missionStage === 1) status.textContent = 'Community workshop — press E to enter';
       else if (nearKofi && missionStage === 2) status.textContent = 'Kofi is ready to talk — press E';
       else if (nearBenedict && missionStage === 3) status.textContent = 'A stranger is waiting — press E';
       else if (nearAma && missionStage === 4) status.textContent = 'Ask Ama about Benedict — press E';
-      else if (missionStage === 5) status.textContent = 'A new lead has been uncovered';
+      else if (nearOffice && missionStage === 5) status.textContent = 'Benedict’s waterfront office — press E';
+      else if (nearNana && missionStage === 6) status.textContent = 'Nana is ready to speak — press E';
+      else if (missionStage === 7) status.textContent = 'You have a meeting to consider';
       else status.textContent = 'Explore the neighbourhood';
 
       if (nearAma && eDown && !eWasDown && missionStage === 0) {
@@ -228,6 +255,20 @@
         dialogueText.textContent = 'Benedict? I know the name. He has funded projects around New Town, but nobody seems to know where his money really comes from. Some people admire him; others keep their distance. If he has approached you, Marcus, take your time before accepting anything. I heard he has an office near the old waterfront. That may be your next lead.';
         missionStage = 5;
         objective.textContent = 'New lead: Ask around about Benedict’s waterfront office. Find out why he is interested in Marcus.';
+      } else if (nearOffice && eDown && !eWasDown && missionStage === 5) {
+        dialogueOpen = true;
+        dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'Waterfront Office';
+        dialogueText.textContent = 'The building is quieter than the busy street outside. A discreet reception desk sits behind the glass entrance. A woman notices Marcus approaching and steps outside to meet him.';
+        missionStage = 6;
+        objective.textContent = 'At the waterfront office: Speak with Nana, the office coordinator.';
+      } else if (nearNana && eDown && !eWasDown && missionStage === 6) {
+        dialogueOpen = true;
+        dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'Nana — Office Coordinator';
+        dialogueText.textContent = 'You must be Marcus. Mr Benedict said you might come by. He is away at the moment, but he left a message: he would like to meet you privately tomorrow. I cannot tell you what he wants. You will have to ask him yourself.';
+        missionStage = 7;
+        objective.textContent = 'New objective: Decide whether to accept Benedict’s invitation. Chapter 1 continues.';
       } else if (eDown && !eWasDown && dialogueOpen) {
         dialogueOpen = false;
         dialogue.style.display = 'none';

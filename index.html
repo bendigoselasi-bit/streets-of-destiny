@@ -91,6 +91,23 @@
     amaHead.position.y = 1.95; ama.add(amaHead);
     ama.position.set(2.8, 0, -12); scene.add(ama);
 
+    // Community workshop: the next destination in Marcus's story
+    box(7, 5.5, 6, 0x806044, -11.5, 2.75, -39);
+    box(7.2, 0.35, 6.2, 0x493a30, -11.5, 5.65, -39);
+    box(2.2, 2.4, 0.12, 0x263d45, -11.5, 1.45, -35.92);
+    box(1.15, 1.1, 0.14, 0xd9b77c, -13.4, 3.4, -35.9);
+    box(1.15, 1.1, 0.14, 0xd9b77c, -9.6, 3.4, -35.9);
+    const workshopMarker = new THREE.Group();
+    const workshopRing = new THREE.Mesh(new THREE.TorusGeometry(1.35, 0.12, 8, 32), new THREE.MeshStandardMaterial({ color: 0x54e0b0, emissive: 0x145c43 }));
+    workshopRing.rotation.x = Math.PI / 2;
+    workshopRing.position.y = 0.25;
+    workshopMarker.add(workshopRing);
+    const workshopBeam = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.7, 12), new THREE.MeshBasicMaterial({ color: 0x54e0b0, transparent: true, opacity: 0.5 }));
+    workshopBeam.position.y = 1.65;
+    workshopMarker.add(workshopBeam);
+    workshopMarker.position.set(-1.5, 0, -39);
+    scene.add(workshopMarker);
+
     const keys = {};
     addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
     addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
@@ -122,9 +139,11 @@
       camera.position.lerp(target, 0.09);
       camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
       const nearAma = player.position.distanceTo(ama.position) < 3.2;
+      const nearWorkshop = player.position.distanceTo(workshopMarker.position) < 3.4;
       const eDown = !!keys.e;
       if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
-      else if (missionStage === 1) status.textContent = 'First meeting complete';
+      else if (nearWorkshop && missionStage === 1) status.textContent = 'Community workshop — press E to enter';
+      else if (missionStage === 2) status.textContent = 'Workshop visit complete';
       else status.textContent = 'Explore the neighbourhood';
 
       if (nearAma && eDown && !eWasDown && missionStage === 0) {
@@ -133,7 +152,14 @@
         dialogueText.textContent = 'Marcus? It has been a long time. The neighbourhood has changed, but people still remember you. Come by the workshop when you are ready.';
         missionStage = 1;
         objective.textContent = 'Completed: Meet Ama. Next: Visit the community workshop.';
-        status.textContent = 'First meeting complete';
+      } else if (nearWorkshop && eDown && !eWasDown && missionStage === 1) {
+        dialogueOpen = true;
+        dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'Community workshop';
+        dialogueText.textContent = 'The workshop is still a place where neighbours share skills and help one another. Ama has left a note for you: start by checking in with the people who kept this place running.';
+        missionStage = 2;
+        objective.textContent = 'Completed: Visit the community workshop. Next: Speak with the workshop team.';
+        status.textContent = 'Workshop visit complete';
       } else if (eDown && !eWasDown && dialogueOpen) {
         dialogueOpen = false;
         dialogue.style.display = 'none';

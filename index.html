@@ -17,7 +17,7 @@
 </head>
 <body>
   <div id="hud"><strong>STREETS OF DESTINY</strong><br>CINEMATIC BUILD · NEW TOWN DISTRICT<br><span id="status">Explore the neighbourhood</span></div>
-  <div id="hint">WASD / Arrows: move · Mouse drag: look · E: interact · J: action pulse · Shift: dodge</div>
+  <div id="hint">WASD / Arrows: move · Mouse drag: look · E: interact · F: enter/exit car · J: action pulse · Shift: dodge</div>
   <div id="mission" style="position:fixed;top:18px;right:18px;z-index:2;max-width:260px;padding:12px 16px;border:1px solid #ffffff33;border-radius:10px;background:#101820cc;line-height:1.5"><strong>FIRST MEETING</strong><br><span id="objective">Find Ama near the meeting point.</span></div>
   <div id="dialogue" style="display:none;position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:3;width:min(520px,calc(100% - 40px));padding:16px 18px;border:1px solid #ffffff55;border-radius:12px;background:#101820f2;line-height:1.55;text-align:center"><strong>Ama</strong><br><span id="dialogueText"></span><br><small>Press E to close</small></div>
   <script type="module">
@@ -154,6 +154,28 @@
     stripe.position.set(0,1.05,0); playerCar.add(stripe);
     playerCar.position.set(0,0,18); scene.add(playerCar);
     let driving=false, carSpeed=0, carSteer=0;
+
+    // New Town garage: a safe vehicle-customisation stop.
+    box(8.5,5.4,5.2,0x34424a,4.2,2.7,65);
+    box(6.8,3.4,0.22,0x101d27,4.2,2.1,62.35);
+    box(7.2,0.28,0.35,0xc18b43,4.2,5.55,62.2);
+    const garageMarker = new THREE.Group();
+    const garageRing = new THREE.Mesh(new THREE.TorusGeometry(1.05,0.12,8,32),new THREE.MeshStandardMaterial({color:0xffd16c,emissive:0x79501c}));
+    garageRing.rotation.x=Math.PI/2; garageRing.position.y=0.18; garageMarker.add(garageRing);
+    garageMarker.position.set(4.2,0,55); scene.add(garageMarker);
+    let garageOpen=false;
+    const garagePaints=[
+      {name:'Midnight Blue',body:0x263f58,trim:0xb88743,glass:0x101f2b},
+      {name:'Obsidian Black',body:0x171c25,trim:0x8f9aa4,glass:0x080d14},
+      {name:'Burgundy',body:0x642c36,trim:0xd0a15d,glass:0x17121a},
+      {name:'Pearl Silver',body:0x9da9b1,trim:0xd6b36e,glass:0x263b49}
+    ];
+    function applyGaragePaint(index) {
+      const paint=garagePaints[index];
+      carPaint.color.setHex(paint.body); carTrim.color.setHex(paint.trim); carGlass.color.setHex(paint.glass);
+      status.textContent='Garage: '+paint.name+' selected';
+      dialogueText.textContent=paint.name+' finish applied. Choose another finish or press E to leave the garage.';
+    }
 
     // Slow ambient traffic: simple original vehicles loop along the boulevard.
     const traffic = [];
@@ -607,10 +629,13 @@
       const nearNana = player.position.distanceTo(nana.position) < 3.2;
       const nearMeeting = player.position.distanceTo(meetingMarker.position) < 3.4;
       const nearPlayerCar = !driving && !interiorMode && player.position.distanceTo(playerCar.position) < 3.8;
+      const nearGarage = !driving && !interiorMode && player.position.distanceTo(garageMarker.position) < 3.5;
       const nearMarket = !interiorMode && player.position.distanceTo(marketMarker.position) < 3.2;
       const nearCafe = !interiorMode && player.position.distanceTo(cafeMarker.position) < 3.2;
       const eDown = !!keys.e;
       if (driving) status.textContent = 'Driving Marcus’s car — W/S accelerate and reverse · A/D steer · F exit';
+      else if (garageOpen) status.textContent = 'Garage open — press 1–4 to customise · E to close';
+      else if (nearGarage) status.textContent = 'New Town Garage — press E to customise Marcus’s car';
       else if (nearPlayerCar) status.textContent = 'Marcus’s car — press F to drive';
       else if (interiorMode) status.textContent = 'Inside ' + (interiorMode==='market'?'New Town Market':'Harbour Cafe') + ' — press E to exit';
       else if (nearMarket) status.textContent = 'New Town Market — press E to enter';
@@ -637,6 +662,20 @@
         driving = false; carSpeed = 0; player.visible = true;
         player.position.set(THREE.MathUtils.clamp(playerCar.position.x+1.5,-5.2,5.2),0,playerCar.position.z);
         keys.f = false;
+      } else if (garageOpen && eDown && !eWasDown) {
+        garageOpen=false; dialogueOpen=false; dialogue.style.display='none';
+      } else if (garageOpen && keys['1']) {
+        applyGaragePaint(0); keys['1']=false;
+      } else if (garageOpen && keys['2']) {
+        applyGaragePaint(1); keys['2']=false;
+      } else if (garageOpen && keys['3']) {
+        applyGaragePaint(2); keys['3']=false;
+      } else if (garageOpen && keys['4']) {
+        applyGaragePaint(3); keys['4']=false;
+      } else if (nearGarage && eDown && !eWasDown) {
+        garageOpen=true; dialogueOpen=true; dialogue.style.display='block';
+        dialogue.querySelector('strong').textContent='New Town Garage';
+        dialogueText.textContent='Give Marcus’s car a fresh finish. Press 1 for Midnight Blue, 2 for Obsidian Black, 3 for Burgundy, or 4 for Pearl Silver. Press E to close.';
       } else if (interiorMode && eDown && !eWasDown) {
         const wasMarket = interiorMode === 'market';
         interiorMode = ''; marketRoom.visible = false; cafeRoom.visible = false;

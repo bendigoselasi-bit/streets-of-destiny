@@ -17,7 +17,7 @@
 </head>
 <body>
   <div id="hud"><strong>STREETS OF DESTINY</strong><br>CINEMATIC BUILD · NEW TOWN DISTRICT<br><span id="status">Explore the neighbourhood</span></div>
-  <div id="hint">WASD / Arrow keys: move · Mouse drag: look around · E: interact</div>
+  <div id="hint">WASD / Arrows: move · Mouse drag: look · E: interact · J: action pulse · Shift: dodge</div>
   <div id="mission" style="position:fixed;top:18px;right:18px;z-index:2;max-width:260px;padding:12px 16px;border:1px solid #ffffff33;border-radius:10px;background:#101820cc;line-height:1.5"><strong>FIRST MEETING</strong><br><span id="objective">Find Ama near the meeting point.</span></div>
   <div id="dialogue" style="display:none;position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:3;width:min(520px,calc(100% - 40px));padding:16px 18px;border:1px solid #ffffff55;border-radius:12px;background:#101820f2;line-height:1.55;text-align:center"><strong>Ama</strong><br><span id="dialogueText"></span><br><small>Press E to close</small></div>
   <script type="module">
@@ -243,7 +243,34 @@
     meetingRing.rotation.x = Math.PI / 2; meetingRing.position.y = 0.22; meetingMarker.add(meetingRing);
     meetingMarker.position.set(0, 0, -70); scene.add(meetingMarker);
 
-    const keys = {};
+
+    // Optional, stylized street confrontation. No weapons or graphic injury: rivals retreat
+    // when their composure meter is depleted by a short-range arcade pulse.
+    const rivals = [];
+    function makeRival(x, z, color) {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.78 });
+      const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.43, 0.95, 4, 8), mat);
+      torso.position.y = 1.1; torso.castShadow = true; group.add(torso);
+      const face = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), new THREE.MeshStandardMaterial({ color: 0x80543d }));
+      face.position.y = 1.95; group.add(face);
+      group.position.set(x, 0, z); scene.add(group);
+      const bar = new THREE.Group();
+      const back = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.12, 0.08), new THREE.MeshBasicMaterial({ color: 0x17212b }));
+      const fill = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.07, 0.1), new THREE.MeshBasicMaterial({ color: 0xe2ad54 }));
+      fill.position.z = 0.06; back.add(fill); bar.add(back); bar.position.set(x, 3, z); scene.add(bar);
+      rivals.push({ group, bar, fill, composure: 100, active: true, hitFlash: 0 });
+    }
+    makeRival(-2.4, -24, 0x633c48);
+    makeRival(2.5, -27, 0x46516b);
+    const combatPanel = document.createElement('div');
+    combatPanel.style.cssText = 'display:none;position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:4;padding:10px 16px;border:1px solid #d5a44e;background:#071522ed;color:#f5e7c8;font:12px system-ui;letter-spacing:.08em;text-align:center';
+    combatPanel.innerHTML = '<strong style="color:#e5b65e">STREET CONFRONTATION</strong><br><span id="combatStatus">Stay calm and create space.</span>';
+    document.body.appendChild(combatPanel);
+    let combatStarted = false, pulseCooldown = 0, playerFocus = 100, encounterWon = false;
+    const pulseRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.08, 8, 40), new THREE.MeshBasicMaterial({ color: 0x69c9ef, transparent: true, opacity: 0 }));
+    pulseRing.rotation.x = Math.PI / 2; pulseRing.position.y = 0.18; scene.add(pulseRing);
+\n    const keys = {};
     addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
     addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
     let yaw = 0, dragging = false, lastX = 0;
@@ -265,11 +292,52 @@
       const forward = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
       const sideways = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
       const direction = new THREE.Vector3(sideways, 0, -forward).normalize().applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
-      player.position.addScaledVector(direction, dt * 7);
+      const dodging = !!keys.shift;
+      player.position.addScaledVector(direction, dt * (dodging ? 10 : 7));
       player.position.x = THREE.MathUtils.clamp(player.position.x, -5.5, 5.5);
       player.position.z = THREE.MathUtils.clamp(player.position.z, -72, 72);
       if (direction.lengthSq() > 0) player.rotation.y = Math.atan2(direction.x, direction.z);
       ring.rotation.z += dt * 0.7;
+      if (missionStage >= 3 && !encounterWon) {
+        combatStarted = true; combatPanel.style.display = 'block';
+        const combatStatus = document.getElementById('combatStatus');
+        pulseCooldown = Math.max(0, pulseCooldown - dt);
+        if (keys.j && pulseCooldown === 0) {
+          pulseCooldown = 0.72; pulseRing.position.set(player.position.x, 0.18, player.position.z);
+          pulseRing.scale.setScalar(0.2); pulseRing.material.opacity = 0.85;
+          for (const rival of rivals) if (rival.active && rival.group.position.distanceTo(player.position) < 4.4) {
+            rival.composure = Math.max(0, rival.composure - 36);
+            rival.fill.scale.x = Math.max(0.001, rival.composure / 100);
+            rival.fill.position.x = -0.625 * (1 - rival.composure / 100);
+            rival.hitFlash = 0.22;
+            if (rival.composure === 0) { rival.active = false; rival.group.visible = false; rival.bar.visible = false; }
+          }
+        }
+        pulseRing.scale.multiplyScalar(1 + dt * 5);
+        pulseRing.material.opacity = Math.max(0, pulseRing.material.opacity - dt * 1.8);
+        let remaining = 0;
+        for (const rival of rivals) if (rival.active) {
+          remaining++;
+          const offset = player.position.clone().sub(rival.group.position); offset.y = 0;
+          if (offset.length() > 2.1) rival.group.position.addScaledVector(offset.normalize(), dt * 1.25);
+          rival.bar.position.set(rival.group.position.x, 3, rival.group.position.z);
+          rival.bar.lookAt(camera.position);
+          rival.hitFlash = Math.max(0, rival.hitFlash - dt);
+          rival.group.position.y = rival.hitFlash > 0 ? 0.12 : 0;
+          if (rival.group.position.distanceTo(player.position) < 1.5 && !dodging) playerFocus = Math.max(0, playerFocus - dt * 7);
+        }
+        combatStatus.textContent = remaining ? 'J: action pulse · Shift: dodge · Focus: ' + Math.round(playerFocus) + '%' : 'The rivals have backed off. The street is clear.';
+        if (remaining === 0) {
+          encounterWon = true; combatPanel.style.display = 'block';
+          objective.textContent = 'Street encounter resolved. Continue the story.';
+          status.textContent = 'The rivals have backed off';
+        }
+        if (playerFocus <= 0) {
+          playerFocus = 100; player.position.set(0, 0, -18);
+          combatStatus.textContent = 'Marcus took a breather and regrouped. Try again.';
+        }
+      } else if (combatStarted && encounterWon) combatPanel.style.display = 'none';
+
       for (let i = 0; i < lampBulbs.length; i++) lampBulbs[i].material.color.setHex(Math.sin(clock.elapsedTime * 2.1 + i) > -0.92 ? 0xffd28a : 0xb77d48);
       const target = player.position.clone().add(new THREE.Vector3(0, 3.2, 7.5).applyAxisAngle(new THREE.Vector3(0,1,0), yaw));
       camera.position.lerp(target, 0.09);

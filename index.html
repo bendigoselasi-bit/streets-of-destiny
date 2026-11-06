@@ -13,7 +13,9 @@
 </head>
 <body>
   <div id="hud"><strong>STREETS OF DESTINY</strong><br>Prototype 0.5 · New Town District<br><span id="status">Explore the neighbourhood</span></div>
-  <div id="hint">WASD / Arrow keys: move · Mouse drag: look around</div>
+  <div id="hint">WASD / Arrow keys: move · Mouse drag: look around · E: interact</div>
+  <div id="mission" style="position:fixed;top:18px;right:18px;z-index:2;max-width:260px;padding:12px 16px;border:1px solid #ffffff33;border-radius:10px;background:#101820cc;line-height:1.5"><strong>FIRST MEETING</strong><br><span id="objective">Find Ama near the meeting point.</span></div>
+  <div id="dialogue" style="display:none;position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:3;width:min(520px,calc(100% - 40px));padding:16px 18px;border:1px solid #ffffff55;border-radius:12px;background:#101820f2;line-height:1.55;text-align:center"><strong>Ama</strong><br><span id="dialogueText"></span><br><small>Press E to close</small></div>
   <script type="module">
     import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
@@ -81,6 +83,14 @@
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3, 12), new THREE.MeshBasicMaterial({ color: 0xffd34e, transparent: true, opacity: 0.55 }));
     beam.position.y = 1.8; marker.add(beam); marker.position.set(0,0,-12); scene.add(marker);
 
+    // Ama, the first story contact
+    const ama = new THREE.Group();
+    const amaBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.43, 0.95, 4, 8), new THREE.MeshStandardMaterial({ color: 0x9b6b32 }));
+    amaBody.position.y = 1.1; ama.add(amaBody);
+    const amaHead = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), new THREE.MeshStandardMaterial({ color: 0x8d5d43 }));
+    amaHead.position.y = 1.95; ama.add(amaHead);
+    ama.position.set(2.8, 0, -12); scene.add(ama);
+
     const keys = {};
     addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
     addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
@@ -90,6 +100,12 @@
     addEventListener('pointermove', e => { if (dragging) { yaw -= (e.clientX - lastX) * 0.006; lastX = e.clientX; } });
 
     const status = document.getElementById('status');
+    const objective = document.getElementById('objective');
+    const dialogue = document.getElementById('dialogue');
+    const dialogueText = document.getElementById('dialogueText');
+    let missionStage = 0;
+    let dialogueOpen = false;
+    let eWasDown = false;
     const clock = new THREE.Clock();
     function animate() {
       requestAnimationFrame(animate);
@@ -105,8 +121,24 @@
       const target = player.position.clone().add(new THREE.Vector3(0, 3.2, 7.5).applyAxisAngle(new THREE.Vector3(0,1,0), yaw));
       camera.position.lerp(target, 0.09);
       camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
-      if (player.position.distanceTo(marker.position) < 2.5) status.textContent = 'Mission point reached — more story content coming soon';
+      const nearAma = player.position.distanceTo(ama.position) < 3.2;
+      const eDown = !!keys.e;
+      if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
+      else if (missionStage === 1) status.textContent = 'First meeting complete';
       else status.textContent = 'Explore the neighbourhood';
+
+      if (nearAma && eDown && !eWasDown && missionStage === 0) {
+        dialogueOpen = true;
+        dialogue.style.display = 'block';
+        dialogueText.textContent = 'Marcus? It has been a long time. The neighbourhood has changed, but people still remember you. Come by the workshop when you are ready.';
+        missionStage = 1;
+        objective.textContent = 'Completed: Meet Ama. Next: Visit the community workshop.';
+        status.textContent = 'First meeting complete';
+      } else if (eDown && !eWasDown && dialogueOpen) {
+        dialogueOpen = false;
+        dialogue.style.display = 'none';
+      }
+      eWasDown = eDown;
       renderer.render(scene, camera);
     }
     animate();

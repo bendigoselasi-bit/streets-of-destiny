@@ -12,7 +12,7 @@
   </style>
 </head>
 <body>
-  <div id="hud"><strong>STREETS OF DESTINY</strong><br>Prototype 0.5 · New Town District<br><span id="status">Explore the neighbourhood</span></div>
+  <div id="hud"><strong>STREETS OF DESTINY</strong><br>Prototype 0.6 · New Town District<br><span id="status">Explore the neighbourhood</span></div>
   <div id="hint">WASD / Arrow keys: move · Mouse drag: look around · E: interact</div>
   <div id="mission" style="position:fixed;top:18px;right:18px;z-index:2;max-width:260px;padding:12px 16px;border:1px solid #ffffff33;border-radius:10px;background:#101820cc;line-height:1.5"><strong>FIRST MEETING</strong><br><span id="objective">Find Ama near the meeting point.</span></div>
   <div id="dialogue" style="display:none;position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:3;width:min(520px,calc(100% - 40px));padding:16px 18px;border:1px solid #ffffff55;border-radius:12px;background:#101820f2;line-height:1.55;text-align:center"><strong>Ama</strong><br><span id="dialogueText"></span><br><small>Press E to close</small></div>
@@ -108,6 +108,17 @@
     workshopMarker.position.set(-1.5, 0, -39);
     scene.add(workshopMarker);
 
+    // Kofi, a workshop volunteer who introduces the next story thread
+    const kofi = new THREE.Group();
+    const kofiBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.43, 0.95, 4, 8), new THREE.MeshStandardMaterial({ color: 0x315b54 }));
+    kofiBody.position.y = 1.1;
+    kofi.add(kofiBody);
+    const kofiHead = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), new THREE.MeshStandardMaterial({ color: 0x80543d }));
+    kofiHead.position.y = 1.95;
+    kofi.add(kofiHead);
+    kofi.position.set(-4.1, 0, -42);
+    scene.add(kofi);
+
     const keys = {};
     addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
     addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
@@ -140,15 +151,18 @@
       camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
       const nearAma = player.position.distanceTo(ama.position) < 3.2;
       const nearWorkshop = player.position.distanceTo(workshopMarker.position) < 3.4;
+      const nearKofi = player.position.distanceTo(kofi.position) < 3.2;
       const eDown = !!keys.e;
       if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
       else if (nearWorkshop && missionStage === 1) status.textContent = 'Community workshop — press E to enter';
-      else if (missionStage === 2) status.textContent = 'Workshop visit complete';
+      else if (nearKofi && missionStage === 2) status.textContent = 'Kofi is ready to talk — press E';
+      else if (missionStage === 3) status.textContent = 'Chapter 1 introduction complete';
       else status.textContent = 'Explore the neighbourhood';
 
       if (nearAma && eDown && !eWasDown && missionStage === 0) {
         dialogueOpen = true;
         dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'Ama';
         dialogueText.textContent = 'Marcus? It has been a long time. The neighbourhood has changed, but people still remember you. Come by the workshop when you are ready.';
         missionStage = 1;
         objective.textContent = 'Completed: Meet Ama. Next: Visit the community workshop.';
@@ -158,8 +172,15 @@
         dialogue.querySelector('strong').textContent = 'Community workshop';
         dialogueText.textContent = 'The workshop is still a place where neighbours share skills and help one another. Ama has left a note for you: start by checking in with the people who kept this place running.';
         missionStage = 2;
-        objective.textContent = 'Completed: Visit the community workshop. Next: Speak with the workshop team.';
-        status.textContent = 'Workshop visit complete';
+        objective.textContent = 'Completed: Visit the community workshop. Next: Speak with Kofi.';
+      } else if (nearKofi && eDown && !eWasDown && missionStage === 2) {
+        dialogueOpen = true;
+        dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'Kofi';
+        dialogueText.textContent = 'Ama said you might come by. We are trying to keep this workshop open for the young people in the area. The roof needs repairs, and the neighbours are organising a weekend fundraiser. If you want to help, speak with Ama about how to bring everyone together.';
+        missionStage = 3;
+        objective.textContent = 'Chapter 1 introduction complete. Next: Find Ama and discuss the community fundraiser.';
+        status.textContent = 'Chapter 1 introduction complete';
       } else if (eDown && !eWasDown && dialogueOpen) {
         dialogueOpen = false;
         dialogue.style.display = 'none';

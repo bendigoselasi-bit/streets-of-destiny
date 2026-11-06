@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STREETS OF DESTINY — Prototype</title>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #111820; color: #fff; font-family: system-ui, sans-serif; }
+    #hud { position: fixed; inset: 18px auto auto 18px; z-index: 2; padding: 12px 16px; border: 1px solid #ffffff33; border-radius: 10px; background: #101820cc; line-height: 1.5; }
+    #hint { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 2; padding: 10px 14px; border-radius: 8px; background: #101820dd; color: #e9edf0; white-space: nowrap; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <div id="hud"><strong>STREETS OF DESTINY</strong><br>Prototype 0.5 · New Town District<br><span id="status">Explore the neighbourhood</span></div>
+  <div id="hint">WASD / Arrow keys: move · Mouse drag: look around</div>
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x9bb6c5);
+    scene.fog = new THREE.Fog(0x9bb6c5, 35, 115);
+
+    const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 250);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    scene.add(new THREE.HemisphereLight(0xddeeff, 0x59604c, 2.1));
+    const sun = new THREE.DirectionalLight(0xffe0b0, 2.3);
+    sun.position.set(-18, 32, 16);
+    sun.castShadow = true;
+    scene.add(sun);
+
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(180, 180), new THREE.MeshStandardMaterial({ color: 0x687568 }));
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    function box(w,h,d,color,x,y,z) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshStandardMaterial({ color, roughness: 0.88 }));
+      mesh.position.set(x,y,z); mesh.castShadow = true; mesh.receiveShadow = true; scene.add(mesh); return mesh;
+    }
+
+    // Main road and pavements
+    box(13, 0.12, 150, 0x343b40, 0, 0.06, 0);
+    box(2.2, 0.2, 150, 0x9b9788, -7.6, 0.12, 0);
+    box(2.2, 0.2, 150, 0x9b9788, 7.6, 0.12, 0);
+    for (let z = -65; z < 70; z += 10) box(0.16, 0.025, 4.5, 0xe7d9a6, 0, 0.14, z);
+
+    // Original fictional neighbourhood blocks
+    const palette = [0xb77b55, 0xc8b28a, 0x8d9a91, 0xd0c4aa, 0x9d6958, 0xb5a18a];
+    for (let i = 0; i < 22; i++) {
+      const side = i % 2 ? 1 : -1;
+      const z = -58 + i * 5.5;
+      const h = 5 + (i % 5) * 1.8;
+      const w = 5 + (i % 3);
+      const x = side * (13 + (i % 2) * 2);
+      box(w, h, 4.5, palette[i % palette.length], x, h / 2, z);
+      for (let yy = 1.8; yy < h - 0.5; yy += 2.2) {
+        for (let xx = -w/2 + 0.9; xx < w/2 - 0.3; xx += 1.7) {
+          box(0.75, 0.9, 0.08, 0x344b59, x + xx, yy, z - 2.29);
+        }
+      }
+    }
+
+    // Player placeholder
+    const player = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.48, 1.0, 4, 8), new THREE.MeshStandardMaterial({ color: 0x263d56 }));
+    body.position.y = 1.15; body.castShadow = true; player.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 12), new THREE.MeshStandardMaterial({ color: 0x8d5d43 }));
+    head.position.y = 2.05; head.castShadow = true; player.add(head);
+    player.position.set(0, 0, 12); scene.add(player);
+
+    // Mission marker
+    const marker = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.35, 0.12, 8, 32), new THREE.MeshStandardMaterial({ color: 0xffd34e, emissive: 0x8a5a00 }));
+    ring.rotation.x = Math.PI / 2; ring.position.y = 0.25; marker.add(ring);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3, 12), new THREE.MeshBasicMaterial({ color: 0xffd34e, transparent: true, opacity: 0.55 }));
+    beam.position.y = 1.8; marker.add(beam); marker.position.set(0,0,-12); scene.add(marker);
+
+    const keys = {};
+    addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+    addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+    let yaw = 0, dragging = false, lastX = 0;
+    renderer.domElement.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; });
+    addEventListener('pointerup', () => dragging = false);
+    addEventListener('pointermove', e => { if (dragging) { yaw -= (e.clientX - lastX) * 0.006; lastX = e.clientX; } });
+
+    const status = document.getElementById('status');
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.04);
+      const forward = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
+      const sideways = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
+      const direction = new THREE.Vector3(sideways, 0, -forward).normalize().applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+      player.position.addScaledVector(direction, dt * 7);
+      player.position.x = THREE.MathUtils.clamp(player.position.x, -5.5, 5.5);
+      player.position.z = THREE.MathUtils.clamp(player.position.z, -72, 72);
+      if (direction.lengthSq() > 0) player.rotation.y = Math.atan2(direction.x, direction.z);
+      ring.rotation.z += dt * 0.7;
+      const target = player.position.clone().add(new THREE.Vector3(0, 3.2, 7.5).applyAxisAngle(new THREE.Vector3(0,1,0), yaw));
+      camera.position.lerp(target, 0.09);
+      camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
+      if (player.position.distanceTo(marker.position) < 2.5) status.textContent = 'Mission point reached — more story content coming soon';
+      else status.textContent = 'Explore the neighbourhood';
+      renderer.render(scene, camera);
+    }
+    animate();
+    addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+  </script>
+</body>
+</html>

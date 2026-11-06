@@ -119,6 +119,36 @@
     kofi.position.set(-4.1, 0, -42);
     scene.add(kofi);
 
+
+    // Benedict, a mysterious and influential stranger inspired by the supplied character reference.
+    // The browser prototype uses original 3D placeholder geometry; the reference portrait can be added as a separate art asset later.
+    const benedict = new THREE.Group();
+    const benedictDark = new THREE.MeshStandardMaterial({ color: 0x171b22, roughness: 0.48, metalness: 0.35 });
+    const benedictGold = new THREE.MeshStandardMaterial({ color: 0xc58a25, roughness: 0.34, metalness: 0.72 });
+    const benedictBlue = new THREE.MeshStandardMaterial({ color: 0x08b9e8, emissive: 0x07506b, metalness: 0.55 });
+    const benedictSkin = new THREE.MeshStandardMaterial({ color: 0x754a35, roughness: 0.9 });
+    const bBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.48, 1.05, 4, 8), benedictDark);
+    bBody.position.y = 1.15; bBody.castShadow = true; benedict.add(bBody);
+    const bHead = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 12), benedictSkin);
+    bHead.position.y = 2.08; bHead.castShadow = true; benedict.add(bHead);
+    const bCape = new THREE.Mesh(new THREE.ConeGeometry(1.05, 3.1, 4, 1, true), benedictDark);
+    bCape.position.set(0, 1.55, 0.48); bCape.rotation.x = Math.PI; bCape.rotation.z = 0.12; bCape.castShadow = true; benedict.add(bCape);
+    const bShoulder = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.34, 0.72), benedictGold);
+    bShoulder.position.set(0, 1.72, 0); bShoulder.rotation.z = -0.08; bShoulder.castShadow = true; benedict.add(bShoulder);
+    const bChest = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.72, 0.18), benedictGold);
+    bChest.position.set(0, 1.23, -0.42); bChest.castShadow = true; benedict.add(bChest);
+    const bCore = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.62, 0.08), benedictBlue);
+    bCore.position.set(0, 1.25, -0.53); benedict.add(bCore);
+    for (const side of [-1, 1]) {
+      const plate = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.65, 0.42), benedictGold);
+      plate.position.set(side * 0.48, 1.12, -0.05); plate.rotation.z = side * -0.16; benedict.add(plate);
+      const light = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.48, 0.05), benedictBlue);
+      light.position.set(side * 0.49, 1.1, -0.29); benedict.add(light);
+    }
+    benedict.position.set(2.7, 0, -55);
+    benedict.rotation.y = Math.PI;
+    scene.add(benedict);
+
     const keys = {};
     addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
     addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
@@ -152,11 +182,13 @@
       const nearAma = player.position.distanceTo(ama.position) < 3.2;
       const nearWorkshop = player.position.distanceTo(workshopMarker.position) < 3.4;
       const nearKofi = player.position.distanceTo(kofi.position) < 3.2;
+      const nearBenedict = player.position.distanceTo(benedict.position) < 3.5;
       const eDown = !!keys.e;
       if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
       else if (nearWorkshop && missionStage === 1) status.textContent = 'Community workshop — press E to enter';
       else if (nearKofi && missionStage === 2) status.textContent = 'Kofi is ready to talk — press E';
-      else if (missionStage === 3) status.textContent = 'Chapter 1 introduction complete';
+      else if (nearBenedict && missionStage === 3) status.textContent = 'A stranger is waiting — press E';
+      else if (missionStage === 4) status.textContent = 'Benedict has given Marcus a reason to be cautious';
       else status.textContent = 'Explore the neighbourhood';
 
       if (nearAma && eDown && !eWasDown && missionStage === 0) {
@@ -181,6 +213,13 @@
         missionStage = 3;
         objective.textContent = 'Chapter 1 introduction complete. Next: Find Ama and discuss the community fundraiser.';
         status.textContent = 'Chapter 1 introduction complete';
+      } else if (nearBenedict && eDown && !eWasDown && missionStage === 3) {
+        dialogueOpen = true;
+        dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'Benedict — The Stranger';
+        dialogueText.textContent = 'You have been asking questions about this neighbourhood, Marcus. Names carry weight here, and mine opens doors you have not even noticed yet. I can offer you an opportunity, but first you should decide who you can trust. We will speak again.';
+        missionStage = 4;
+        objective.textContent = 'New contact: Benedict. A powerful stranger has taken an interest in Marcus. Find out why.';
       } else if (eDown && !eWasDown && dialogueOpen) {
         dialogueOpen = false;
         dialogue.style.display = 'none';

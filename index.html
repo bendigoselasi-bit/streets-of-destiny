@@ -13,6 +13,30 @@
     #dialogue strong { color: #e5b65e; letter-spacing: .14em; text-transform: uppercase; }
     body:after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at center, transparent 48%, #02081299 100%), linear-gradient(0deg, #02081244, transparent 28%, transparent 75%, #02081233); }
     canvas { display: block; }
+
+    #mobileControls { display:none; position:fixed; inset:0; z-index:5; pointer-events:none; font:600 12px system-ui,sans-serif; }
+    #stickBase { position:absolute;left:22px;bottom:28px;width:132px;height:132px;border:1px solid #e5b65e99;border-radius:50%;background:#07152299;pointer-events:auto;touch-action:none; }
+    #stickKnob { position:absolute;left:43px;top:43px;width:44px;height:44px;border-radius:50%;background:#d5a44ecc;border:1px solid #ffe0a0;box-shadow:0 3px 14px #0009; }
+    .mobileBtn { pointer-events:auto;touch-action:none;min-width:54px;min-height:48px;padding:8px;border:1px solid #d5a44e;border-radius:8px;background:#0b1b2bdc;color:#fff0d2;font-weight:700;box-shadow:0 4px 14px #0008; }
+    #actionButtons { position:absolute;right:16px;bottom:24px;display:grid;grid-template-columns:repeat(2,58px);gap:9px; }
+    #garageTouch { position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:none;gap:5px;pointer-events:auto; }
+    #garageTouch .mobileBtn { min-width:42px;min-height:42px;padding:5px; }
+    @media (pointer:coarse), (max-width:700px) {
+      #mobileControls { display:block; }
+      #hud { top:10px!important;left:10px!important;max-width:54vw;font-size:10px;padding:8px!important; }
+      #hud strong { font-size:10px!important; }
+      #mission { top:10px!important;right:10px!important;max-width:38vw!important;padding:8px!important;font-size:11px; }
+      #savePanel { top:auto!important;left:10px!important;bottom:174px!important;gap:5px!important; }
+      #savePanel button { padding:7px!important;font-size:9px; }
+      #hint { display:none; }
+      #dialogue { bottom:155px!important;width:calc(100% - 28px)!important;padding:11px!important;font-size:13px; }
+    }
+    @media (max-width:390px) {
+      #stickBase { width:112px;height:112px;left:14px;bottom:22px; }
+      #stickKnob { left:35px;top:35px;width:40px;height:40px; }
+      #actionButtons { right:10px;bottom:18px;grid-template-columns:repeat(2,52px);gap:6px; }
+      .mobileBtn { min-width:48px;min-height:44px; }
+    }
   </style>
 </head>
 <body>
@@ -20,6 +44,20 @@
   <div id="savePanel" style="position:fixed;top:112px;left:18px;z-index:3;display:flex;gap:7px"><button id="saveGame" style="padding:9px 12px;background:#14283a;color:#f5e7c8;border:1px solid #c99a4a;border-radius:3px;cursor:pointer">SAVE GAME</button><button id="loadGame" style="padding:9px 12px;background:#14283a;color:#f5e7c8;border:1px solid #c99a4a;border-radius:3px;cursor:pointer">LOAD GAME</button></div>
   <div id="hint">WASD / Arrows: move · Mouse drag: look · E: interact · F: enter/exit car · J: action pulse · Shift: dodge</div>
   <div id="mission" style="position:fixed;top:18px;right:18px;z-index:2;max-width:260px;padding:12px 16px;border:1px solid #ffffff33;border-radius:10px;background:#101820cc;line-height:1.5"><strong>FIRST MEETING</strong><br><span id="objective">Find Ama near the meeting point.</span></div>
+  <div id="mobileControls" aria-label="Touch game controls">
+    <div id="stickBase" aria-label="Movement joystick"><div id="stickKnob"></div></div>
+    <div id="actionButtons">
+      <button class="mobileBtn" data-key="e">INTERACT</button>
+      <button class="mobileBtn" data-key="f">CAR</button>
+      <button class="mobileBtn" data-key="j">ACTION</button>
+      <button class="mobileBtn" data-key="shift">DODGE</button>
+    </div>
+    <div id="garageTouch">
+      <button class="mobileBtn" data-key="1">1</button><button class="mobileBtn" data-key="2">2</button>
+      <button class="mobileBtn" data-key="3">3</button><button class="mobileBtn" data-key="4">4</button>
+      <button class="mobileBtn" data-key="5">SUV</button><button class="mobileBtn" data-key="6">SPORT</button>
+    </div>
+  </div>
   <div id="dialogue" style="display:none;position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:3;width:min(520px,calc(100% - 40px));padding:16px 18px;border:1px solid #ffffff55;border-radius:12px;background:#101820f2;line-height:1.55;text-align:center"><strong>Ama</strong><br><span id="dialogueText"></span><br><small>Press E to close</small></div>
   <script type="module">
     import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
@@ -539,9 +577,31 @@
     addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
     addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
     let yaw = 0, dragging = false, lastX = 0;
-    renderer.domElement.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; });
+    renderer.domElement.addEventListener('pointerdown', e => { if(e.pointerType==='touch' && e.clientX < innerWidth*0.42) return; dragging = true; lastX = e.clientX; });
     addEventListener('pointerup', () => dragging = false);
+    addEventListener('pointercancel', () => dragging = false);
     addEventListener('pointermove', e => { if (dragging) { yaw -= (e.clientX - lastX) * 0.006; lastX = e.clientX; } });
+    const stickBase=document.getElementById('stickBase'), stickKnob=document.getElementById('stickKnob');
+    let stickPointer=null;
+    function clearStick(){ ['w','a','s','d'].forEach(k=>keys[k]=false); stickKnob.style.transform='translate(0px,0px)'; }
+    stickBase.addEventListener('pointerdown',e=>{stickPointer=e.pointerId;stickBase.setPointerCapture(e.pointerId);moveStick(e);});
+    stickBase.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer)moveStick(e);});
+    function moveStick(e){
+      const r=stickBase.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+      let dx=e.clientX-cx,dy=e.clientY-cy; const max=r.width*0.34, len=Math.hypot(dx,dy);
+      if(len>max){dx=dx/len*max;dy=dy/len*max;}
+      stickKnob.style.transform='translate('+dx+'px,'+dy+'px)';
+      keys.d=dx>17;keys.a=dx< -17;keys.s=dy>17;keys.w=dy< -17;
+    }
+    function releaseStick(e){if(e.pointerId===stickPointer){stickPointer=null;clearStick();}}
+    stickBase.addEventListener('pointerup',releaseStick);stickBase.addEventListener('pointercancel',releaseStick);
+    document.querySelectorAll('.mobileBtn').forEach(btn=>{
+      const key=btn.dataset.key;
+      const press=e=>{e.preventDefault();keys[key]=true;};
+      const release=e=>{e.preventDefault();keys[key]=false;};
+      btn.addEventListener('pointerdown',press);btn.addEventListener('pointerup',release);
+      btn.addEventListener('pointercancel',release);btn.addEventListener('pointerleave',release);
+    });
 
     const status = document.getElementById('status');
     const objective = document.getElementById('objective');
@@ -739,6 +799,7 @@
       const nearCafe = !interiorMode && player.position.distanceTo(cafeMarker.position) < 3.2;
       const nearHouse = !interiorMode && player.position.distanceTo(houseMarker.position) < 3.5;
       const eDown = !!keys.e;
+      document.getElementById('garageTouch').style.display = garageOpen ? 'flex' : 'none';
       if (driving) status.textContent = 'Driving Marcus’s car — W/S accelerate and reverse · A/D steer · F exit';
       else if (garageOpen) status.textContent = 'Garage open — press 1–4 to customise · E to close';
       else if (nearGarage) status.textContent = 'New Town Garage — press E to customise Marcus’s car';

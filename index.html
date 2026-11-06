@@ -188,7 +188,8 @@
       else if (nearWorkshop && missionStage === 1) status.textContent = 'Community workshop — press E to enter';
       else if (nearKofi && missionStage === 2) status.textContent = 'Kofi is ready to talk — press E';
       else if (nearBenedict && missionStage === 3) status.textContent = 'A stranger is waiting — press E';
-      else if (missionStage === 4) status.textContent = 'Benedict has given Marcus a reason to be cautious';
+      else if (nearAma && missionStage === 4) status.textContent = 'Ask Ama about Benedict — press E';
+      else if (missionStage === 5) status.textContent = 'A new lead has been uncovered';
       else status.textContent = 'Explore the neighbourhood';
 
       if (nearAma && eDown && !eWasDown && missionStage === 0) {
@@ -220,6 +221,13 @@
         dialogueText.textContent = 'You have been asking questions about this neighbourhood, Marcus. Names carry weight here, and mine opens doors you have not even noticed yet. I can offer you an opportunity, but first you should decide who you can trust. We will speak again.';
         missionStage = 4;
         objective.textContent = 'New contact: Benedict. A powerful stranger has taken an interest in Marcus. Find out why.';
+      } else if (nearAma && eDown && !eWasDown && missionStage === 4) {
+        dialogueOpen = true;
+        dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'Ama';
+        dialogueText.textContent = 'Benedict? I know the name. He has funded projects around New Town, but nobody seems to know where his money really comes from. Some people admire him; others keep their distance. If he has approached you, Marcus, take your time before accepting anything. I heard he has an office near the old waterfront. That may be your next lead.';
+        missionStage = 5;
+        objective.textContent = 'New lead: Ask around about Benedict’s waterfront office. Find out why he is interested in Marcus.';
       } else if (eDown && !eWasDown && dialogueOpen) {
         dialogueOpen = false;
         dialogue.style.display = 'none';

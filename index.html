@@ -137,6 +137,33 @@
     head.position.y = 2.05; head.castShadow = true; player.add(head);
     player.position.set(0, 0, 12); scene.add(player);
 
+    // Procedural third-person character rig: pivoted limbs allow a simple walk, idle,
+    // dodge, and action-pulse pose without requiring external animation files.
+    const limbMaterial = new THREE.MeshStandardMaterial({ color: 0x182b3c, roughness: 0.82 });
+    const shoeMaterial = new THREE.MeshStandardMaterial({ color: 0x111820, roughness: 0.9 });
+    function makeLimb(parent, x, y, length, radius, material, shoe = false) {
+      const pivot = new THREE.Group();
+      pivot.position.set(x, y, 0);
+      parent.add(pivot);
+      const limb = new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 4, 8), material);
+      limb.position.y = -length * 0.48;
+      limb.castShadow = true;
+      pivot.add(limb);
+      if (shoe) {
+        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.18, 0.5), shoeMaterial);
+        foot.position.set(0, -length * 0.94, 0.12);
+        foot.castShadow = true;
+        pivot.add(foot);
+      }
+      return pivot;
+    }
+    const leftArm = makeLimb(player, -0.48, 1.72, 0.72, 0.17, limbMaterial);
+    const rightArm = makeLimb(player, 0.48, 1.72, 0.72, 0.17, limbMaterial);
+    const leftLeg = makeLimb(player, -0.23, 0.78, 0.82, 0.2, limbMaterial, true);
+    const rightLeg = makeLimb(player, 0.23, 0.78, 0.82, 0.2, limbMaterial, true);
+    let gaitTime = 0;
+    let actionPose = 0;
+
     // Mission marker
     const marker = new THREE.Group();
     const ring = new THREE.Mesh(new THREE.TorusGeometry(1.35, 0.12, 8, 32), new THREE.MeshStandardMaterial({ color: 0xffd34e, emissive: 0x8a5a00 }));
@@ -297,7 +324,22 @@
       player.position.addScaledVector(direction, dt * (dodging ? 10 : 7));
       player.position.x = THREE.MathUtils.clamp(player.position.x, -5.5, 5.5);
       player.position.z = THREE.MathUtils.clamp(player.position.z, -72, 72);
-      if (direction.lengthSq() > 0) player.rotation.y = Math.atan2(direction.x, direction.z);
+      const moving = direction.lengthSq() > 0.001;
+      if (moving) player.rotation.y = Math.atan2(direction.x, direction.z);
+      gaitTime += dt * (dodging ? 13 : 9);
+      const gait = moving ? Math.sin(gaitTime) : 0;
+      const walkBlend = THREE.MathUtils.lerp(0, 1, moving ? 1 : 0);
+      leftLeg.rotation.x = gait * 0.48 * walkBlend;
+      rightLeg.rotation.x = -gait * 0.48 * walkBlend;
+      leftArm.rotation.x = -gait * 0.34 * walkBlend;
+      rightArm.rotation.x = gait * 0.34 * walkBlend;
+      player.position.y = moving ? Math.abs(Math.sin(gaitTime * 2)) * 0.045 : 0;
+      const pulsePressed = !!keys.j && pulseCooldown <= 0.08;
+      actionPose = THREE.MathUtils.lerp(actionPose, pulsePressed ? 1 : 0, Math.min(1, dt * 10));
+      rightArm.rotation.x = THREE.MathUtils.lerp(rightArm.rotation.x, -1.15, actionPose);
+      rightArm.rotation.z = THREE.MathUtils.lerp(rightArm.rotation.z, -0.22, actionPose);
+      leftArm.rotation.z = THREE.MathUtils.lerp(leftArm.rotation.z, 0.18, dodging ? 1 : 0);
+      body.rotation.x = THREE.MathUtils.lerp(body.rotation.x, dodging ? 0.18 : 0, Math.min(1, dt * 7));
       ring.rotation.z += dt * 0.7;
       const inEncounterZone = player.position.z < -17 && player.position.z > -36;
       if (missionStage >= 3 && inEncounterZone && !encounterWon) {

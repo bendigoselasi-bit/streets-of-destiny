@@ -524,6 +524,21 @@
     bendigoJacket.position.set(0,1.15,0.34); bendigo.add(bendigoJacket);
     const bendigoTrim = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.58,0.06),new THREE.MeshStandardMaterial({color:0xc58a25,metalness:0.45}));
     bendigoTrim.position.set(0,1.28,-0.39); bendigo.add(bendigoTrim);
+    const bendigoPantsMat = new THREE.MeshStandardMaterial({color:0x202a30,roughness:0.9});
+    const bendigoShoeMat = new THREE.MeshStandardMaterial({color:0x111519,roughness:0.72});
+    const bendigoArms = [], bendigoLegs = [];
+    for (const side of [-1,1]) {
+      const armPivot = new THREE.Group(); armPivot.position.set(side*0.48,1.52,0.28); bendigo.add(armPivot);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.115,0.145,0.78,9),new THREE.MeshStandardMaterial({color:0x80543d,roughness:0.9}));
+      arm.position.y=-0.36; arm.castShadow=true; armPivot.add(arm);
+      const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,0.16,9),new THREE.MeshStandardMaterial({color:0x263d43}));
+      cuff.position.y=-0.12; armPivot.add(cuff); bendigoArms.push(armPivot);
+      const legPivot = new THREE.Group(); legPivot.position.set(side*0.2,0.78,0.02); bendigo.add(legPivot);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.16,0.78,9),bendigoPantsMat);
+      leg.position.y=-0.38; leg.castShadow=true; legPivot.add(leg);
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.16,0.44),bendigoShoeMat);
+      shoe.position.set(0,-0.76,0.09); shoe.castShadow=true; legPivot.add(shoe); bendigoLegs.push(legPivot);
+    }
     bendigo.position.set(4.2,0,-47); scene.add(bendigo);
     const bendigoMarker = new THREE.Mesh(new THREE.TorusGeometry(0.78,0.08,8,28),new THREE.MeshStandardMaterial({color:0x62d4b0,emissive:0x164b3b}));
     bendigoMarker.rotation.x=Math.PI/2; bendigoMarker.position.set(4.2,0.16,-47); scene.add(bendigoMarker);
@@ -637,6 +652,7 @@
     let bendigoJoined = false;
     let bendigoWorkshopVisited = false;
     let bendigoFollowTime = 0;
+    let bendigoGaitTime = 0;
     const SAVE_KEY = 'streetsOfDestiny.save.v1';
     function saveGame(showMessage=true) {
       const data = {
@@ -730,6 +746,14 @@
         const followRight = new THREE.Vector3(Math.cos(player.rotation.y),0,-Math.sin(player.rotation.y));
         const followTarget = player.position.clone().addScaledVector(followForward,-1.65).addScaledVector(followRight,1.15);
         bendigo.position.lerp(followTarget,1-Math.exp(-dt*3.2));
+        const bendigoWalking = bendigo.position.distanceTo(followTarget) > 0.16;
+        bendigoGaitTime += dt * (bendigoWalking ? 9 : 2.1);
+        const bendigoStride = bendigoWalking ? Math.sin(bendigoGaitTime)*0.48 : Math.sin(bendigoGaitTime)*0.025;
+        bendigoLegs[0].rotation.x = bendigoStride;
+        bendigoLegs[1].rotation.x = -bendigoStride;
+        bendigoArms[0].rotation.x = -bendigoStride*0.72;
+        bendigoArms[1].rotation.x = bendigoStride*0.72;
+        bendigoHead.rotation.z = Math.sin(bendigoGaitTime*0.5)*0.018;
         const facePlayer = new THREE.Vector3(player.position.x-bendigo.position.x,0,player.position.z-bendigo.position.z);
         if(facePlayer.lengthSq()>0.01) bendigo.rotation.y=Math.atan2(facePlayer.x,facePlayer.z);
         bendigoFollowTime += dt*3.5;

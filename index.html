@@ -281,12 +281,21 @@
       torso.position.y = 1.1; torso.castShadow = true; group.add(torso);
       const face = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), new THREE.MeshStandardMaterial({ color: 0x80543d }));
       face.position.y = 1.95; group.add(face);
+      const rivalLimbMat = new THREE.MeshStandardMaterial({ color, roughness: 0.86 });
+      function rivalLimb(px, py, length, radius) {
+        const pivot = new THREE.Group(); pivot.position.set(px, py, 0); group.add(pivot);
+        const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 4, 8), rivalLimbMat);
+        mesh.position.y = -length * 0.48; mesh.castShadow = true; pivot.add(mesh);
+        return pivot;
+      }
+      const arms = [rivalLimb(-0.46, 1.68, 0.68, 0.16), rivalLimb(0.46, 1.68, 0.68, 0.16)];
+      const legs = [rivalLimb(-0.22, 0.72, 0.78, 0.19), rivalLimb(0.22, 0.72, 0.78, 0.19)];
       group.position.set(x, 0, z); scene.add(group);
       const bar = new THREE.Group();
       const back = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.12, 0.08), new THREE.MeshBasicMaterial({ color: 0x17212b }));
       const fill = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.07, 0.1), new THREE.MeshBasicMaterial({ color: 0xe2ad54 }));
       fill.position.z = 0.06; back.add(fill); bar.add(back); bar.position.set(x, 3, z); scene.add(bar);
-      rivals.push({ group, bar, fill, composure: 100, active: true, hitFlash: 0 });
+      rivals.push({ group, bar, fill, arms, legs, torso, composure: 100, active: true, retreating: false, hitFlash: 0, gait: Math.random() * 5 });
     }
     makeRival(-2.4, -24, 0x633c48);
     makeRival(2.5, -27, 0x46516b);
@@ -359,21 +368,44 @@
             rival.fill.scale.x = Math.max(0.001, rival.composure / 100);
             rival.fill.position.x = -0.625 * (1 - rival.composure / 100);
             rival.hitFlash = 0.22;
-            if (rival.composure === 0) { rival.active = false; rival.group.visible = false; rival.bar.visible = false; }
+            if (rival.composure === 0) { rival.active = false; rival.retreating = true; rival.bar.visible = false; }
           }
         }
         pulseRing.scale.multiplyScalar(1 + dt * 5);
         pulseRing.material.opacity = Math.max(0, pulseRing.material.opacity - dt * 1.8);
         let remaining = 0;
-        for (const rival of rivals) if (rival.active) {
-          remaining++;
-          const offset = player.position.clone().sub(rival.group.position); offset.y = 0;
-          if (offset.length() > 2.1) rival.group.position.addScaledVector(offset.normalize(), dt * 1.25);
-          rival.bar.position.set(rival.group.position.x, 3, rival.group.position.z);
-          rival.bar.lookAt(camera.position);
+        for (const rival of rivals) {
           rival.hitFlash = Math.max(0, rival.hitFlash - dt);
-          rival.group.position.y = rival.hitFlash > 0 ? 0.12 : 0;
-          if (rival.group.position.distanceTo(player.position) < 1.5 && !dodging) playerFocus = Math.max(0, playerFocus - dt * 7);
+          rival.gait += dt * (rival.retreating ? 12 : 7);
+          const step = Math.sin(rival.gait) * (rival.retreating || rival.active ? 0.42 : 0);
+          rival.legs[0].rotation.x = step;
+          rival.legs[1].rotation.x = -step;
+          rival.arms[0].rotation.x = -step * 0.65;
+          rival.arms[1].rotation.x = step * 0.65;
+          rival.torso.rotation.z = THREE.MathUtils.lerp(rival.torso.rotation.z, rival.hitFlash > 0 ? 0.18 : 0, Math.min(1, dt * 9));
+          rival.group.position.y = rival.hitFlash > 0 ? 0.1 : 0;
+          if (rival.retreating) {
+            const away = rival.group.position.clone().sub(player.position); away.y = 0;
+            if (away.lengthSq() > 0.01) {
+              away.normalize();
+              rival.group.position.addScaledVector(away, dt * 4.8);
+              rival.group.rotation.y = Math.atan2(away.x, away.z);
+            }
+            if (rival.group.position.distanceTo(player.position) > 15) {
+              rival.retreating = false;
+              rival.group.visible = false;
+            }
+          } else if (rival.active) {
+            remaining++;
+            const offset = player.position.clone().sub(rival.group.position); offset.y = 0;
+            if (offset.length() > 2.1) {
+              rival.group.position.addScaledVector(offset.normalize(), dt * 1.25);
+              rival.group.rotation.y = Math.atan2(-offset.x, -offset.z);
+            }
+            rival.bar.position.set(rival.group.position.x, 3, rival.group.position.z);
+            rival.bar.lookAt(camera.position);
+            if (rival.group.position.distanceTo(player.position) < 1.5 && !dodging) playerFocus = Math.max(0, playerFocus - dt * 7);
+          }
         }
         combatStatus.textContent = remaining ? 'J: action pulse · Shift: dodge · Focus: ' + Math.round(playerFocus) + '%' : 'The rivals have backed off. The street is clear.';
         if (remaining === 0) {

@@ -309,12 +309,26 @@
         limb.position.y = -0.27; limb.castShadow = true; leg.add(limb); legs.push(leg);
       }
       person.position.set(x, 0, z); scene.add(person);
-      pedestrians.push({ person, legs, phase, originX: x, originZ: z });
+      const walker = { person, legs, phase, originX: x, originZ: z };
+      pedestrians.push(walker);
+      return walker;
     }
     addPedestrian(-8.05, -16, 0x8a583c, 0.4);
     addPedestrian(8.05, -34, 0x3c6870, 2.1);
     addPedestrian(-8.05, 26, 0x9a873e, 3.4);
     addPedestrian(8.05, 51, 0x644d82, 4.7);
+    // Residents who gather at the workshop when the public meeting begins.
+    const meetingResidents = [
+      { name: 'Esi — Market Trader', line: 'My stall has supported my family for years. If the waterfront changes, traders need clear spaces and fair terms in writing.' },
+      { name: 'Kojo — Workshop Mentor', line: 'Young people need training and real opportunities, not promises that disappear after the cameras leave. Put the training plan on the public record.' },
+      { name: 'Adwoa — Neighbourhood Parent', line: 'We want safer, brighter streets and a place our children can be proud of. Please make sure residents can review the work as it happens.' }
+    ];
+    const meetingWalkers = [
+      addPedestrian(-4.2, -31.5, 0x9a6245, 0.7),
+      addPedestrian(0, -30.8, 0x3c6870, 2.4),
+      addPedestrian(4.2, -31.5, 0x9a873e, 4.1)
+    ];
+    meetingWalkers.forEach(w => w.person.visible = false);
 
     // Enterable neighbourhood market and waterfront cafe.
     function businessMarker(x,z,color) {
@@ -708,6 +722,7 @@
     let townMeetingStarted = false;
     let townMeetingComplete = false;
     let townMeetingChoice = '';
+    let meetingResidentTalked = [false, false, false];
     let communitySupport = 50;
     let patronStanding = 50;
     let bendigoFollowTime = 0;
@@ -716,7 +731,7 @@
     const SAVE_KEY = 'streetsOfDestiny.save.v1';
     function saveGame(showMessage=true) {
       const data = {
-        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoFollowing, bendigoTrust, bendigoTrustChoiceMade, bendigoWorkshopVisited, bendigoPlanChoiceMade, bendigoPlan, bendigoMissionComplete, bendigoReportComplete, townMeetingStarted, townMeetingComplete, townMeetingChoice, communitySupport, patronStanding,
+        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoFollowing, bendigoTrust, bendigoTrustChoiceMade, bendigoWorkshopVisited, bendigoPlanChoiceMade, bendigoPlan, bendigoMissionComplete, bendigoReportComplete, townMeetingStarted, townMeetingComplete, townMeetingChoice, meetingResidentTalked, communitySupport, patronStanding,
         player: {x: player.position.x, z: player.position.z, yaw: player.rotation.y},
         car: {x: playerCar.position.x, z: playerCar.position.z, yaw: playerCar.rotation.y}
       };
@@ -748,6 +763,8 @@
         townMeetingStarted=!!data.townMeetingStarted;
         townMeetingComplete=!!data.townMeetingComplete;
         townMeetingChoice=data.townMeetingChoice==='guarantees' || data.townMeetingChoice==='pilot' ? data.townMeetingChoice : '';
+        meetingResidentTalked=Array.isArray(data.meetingResidentTalked) ? [0,1,2].map(i=>!!data.meetingResidentTalked[i]) : [false,false,false];
+        meetingWalkers.forEach(w=>w.person.visible=townMeetingStarted);
         communitySupport=THREE.MathUtils.clamp(Number(data.communitySupport??50),0,100);
         patronStanding=THREE.MathUtils.clamp(Number(data.patronStanding??50),0,100);
         townNoticeBoard.material.color.setHex(communitySupport>=65 ? 0x477b62 : 0x7a6246);
@@ -977,7 +994,7 @@
       const nearHouse = !interiorMode && player.position.distanceTo(houseMarker.position) < 3.5;
       const eDown = !!keys.e;
       document.getElementById('garageTouch').style.display = garageOpen ? 'flex' : 'none';
-      document.getElementById('meetingChoices').style.display = townMeetingStarted && !townMeetingComplete && !dialogueOpen ? 'flex' : 'none';
+      document.getElementById('meetingChoices').style.display = townMeetingStarted && !townMeetingComplete && meetingResidentTalked.every(Boolean) && !dialogueOpen ? 'flex' : 'none';
       if (driving) status.textContent = 'Driving Benedict’s car — W/S accelerate and reverse · A/D steer · F exit';
       else if (garageOpen) status.textContent = 'Garage open — press 1–4 to customise · E to close';
       else if (nearGarage) status.textContent = 'New Town Garage — press E to customise Benedict’s car';
@@ -1006,7 +1023,18 @@
       else if (missionStage === 10) status.textContent = 'You declined the Patron’s invitation';
       else status.textContent = 'Explore the neighbourhood';
 
-      if (townMeetingStarted && !townMeetingComplete && !dialogueOpen && (keys['1'] || keys['2'])) {
+      const residentNear = meetingWalkers.map(w=>player.position.distanceTo(w.person.position)<2.8);
+      const residentIndex = residentNear.findIndex(Boolean);
+      if (townMeetingStarted && !townMeetingComplete && residentIndex>=0 && eDown && !eWasDown && !dialogueOpen && !meetingResidentTalked[residentIndex]) {
+        meetingResidentTalked[residentIndex]=true;
+        dialogueOpen=true; dialogue.style.display='block';
+        dialogue.querySelector('strong').textContent=meetingResidents[residentIndex].name;
+        dialogueText.textContent=meetingResidents[residentIndex].line;
+        const remaining=meetingResidentTalked.filter(v=>!v).length;
+        objective.textContent=remaining ? 'Listen to the remaining ' + remaining + ' resident(s) before making the meeting decision.' : 'You have heard all three residents. Press 1 for public guarantees or 2 for a staged pilot.';
+        status.textContent=remaining ? 'Resident testimony recorded' : 'All resident voices heard — decision ready';
+        saveGame(false);
+      } else if (townMeetingStarted && !townMeetingComplete && !dialogueOpen && meetingResidentTalked.every(Boolean) && (keys['1'] || keys['2'])) {
         const publicGuarantees = !!keys['1'];
         townMeetingChoice = publicGuarantees ? 'guarantees' : 'pilot';
         townMeetingComplete = true;
@@ -1029,10 +1057,11 @@
         saveGame(false);
       } else if (bendigoReportComplete && !townMeetingStarted && nearWorkshop && eDown && !eWasDown && !dialogueOpen) {
         townMeetingStarted = true;
+        meetingWalkers.forEach(w=>w.person.visible=true);
         dialogueOpen = true; dialogue.style.display = 'block';
         dialogue.querySelector('strong').textContent = 'New Town — The Public Meeting';
         const turnout = communitySupport >= 70 ? 'The room is full; traders and workshop families arrive ready to speak.' : patronStanding >= 70 ? 'Several residents arrive, alongside a representative from the Patron’s office.' : 'A small but determined group of residents gathers around the workshop tables.';
-        dialogueText.textContent = turnout + ' The future of the waterfront is on the agenda. Benedict can insist on public guarantees before work begins, or support a staged pilot with residents overseeing progress. Close this conversation, then press 1 or 2 to make the decision.';
+        dialogueText.textContent = turnout + ' Three residents want to speak before any decision: Esi, a market trader; Kojo, a workshop mentor; and Adwoa, a neighbourhood parent. Walk up to each person and press E to hear their concern. Then choose public guarantees or a staged pilot.';
         objective.textContent = 'Public meeting: press 1 for public guarantees, or 2 for a staged renewal pilot with resident oversight.';
         status.textContent = 'New Town public meeting — decision required';
         saveGame(false);

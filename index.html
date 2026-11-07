@@ -27,6 +27,8 @@
     #actionButtons { position:absolute;right:16px;bottom:24px;display:grid;grid-template-columns:repeat(2,58px);gap:9px; }
     #garageTouch { position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:none;gap:5px;pointer-events:auto; }
     #garageTouch .mobileBtn { min-width:42px;min-height:42px;padding:5px; }
+    #meetingChoices { display:none;position:fixed;right:18px;bottom:190px;z-index:6;gap:8px; }
+    #meetingChoices .mobileBtn { min-width:132px; }
     @media (pointer:coarse), (max-width:700px) {
       #mobileControls { display:block; }
       #hud { top:10px!important;left:10px!important;max-width:54vw;font-size:10px;padding:8px!important; }
@@ -61,6 +63,7 @@
       <button class="mobileBtn" data-key="g">BENDIGO</button>
       <button class="mobileBtn" data-key="shift">DODGE</button>
     </div>
+    <div id="meetingChoices"><button class="mobileBtn" data-key="1">1 · PUBLIC GUARANTEES</button><button class="mobileBtn" data-key="2">2 · STAGED PILOT</button></div>
     <div id="garageTouch">
       <button class="mobileBtn" data-key="1">1</button><button class="mobileBtn" data-key="2">2</button>
       <button class="mobileBtn" data-key="3">3</button><button class="mobileBtn" data-key="4">4</button>
@@ -702,6 +705,9 @@
     let bendigoPlan = '';
     let bendigoMissionComplete = false;
     let bendigoReportComplete = false;
+    let townMeetingStarted = false;
+    let townMeetingComplete = false;
+    let townMeetingChoice = '';
     let communitySupport = 50;
     let patronStanding = 50;
     let bendigoFollowTime = 0;
@@ -710,7 +716,7 @@
     const SAVE_KEY = 'streetsOfDestiny.save.v1';
     function saveGame(showMessage=true) {
       const data = {
-        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoFollowing, bendigoTrust, bendigoTrustChoiceMade, bendigoWorkshopVisited, bendigoPlanChoiceMade, bendigoPlan, bendigoMissionComplete, bendigoReportComplete, communitySupport, patronStanding,
+        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoFollowing, bendigoTrust, bendigoTrustChoiceMade, bendigoWorkshopVisited, bendigoPlanChoiceMade, bendigoPlan, bendigoMissionComplete, bendigoReportComplete, townMeetingStarted, townMeetingComplete, townMeetingChoice, communitySupport, patronStanding,
         player: {x: player.position.x, z: player.position.z, yaw: player.rotation.y},
         car: {x: playerCar.position.x, z: playerCar.position.z, yaw: playerCar.rotation.y}
       };
@@ -739,6 +745,9 @@
         bendigoPlan=data.bendigoPlan==='community' || data.bendigoPlan==='dialogue' ? data.bendigoPlan : '';
         bendigoMissionComplete=!!data.bendigoMissionComplete;
         bendigoReportComplete=!!data.bendigoReportComplete;
+        townMeetingStarted=!!data.townMeetingStarted;
+        townMeetingComplete=!!data.townMeetingComplete;
+        townMeetingChoice=data.townMeetingChoice==='guarantees' || data.townMeetingChoice==='pilot' ? data.townMeetingChoice : '';
         communitySupport=THREE.MathUtils.clamp(Number(data.communitySupport??50),0,100);
         patronStanding=THREE.MathUtils.clamp(Number(data.patronStanding??50),0,100);
         townNoticeBoard.material.color.setHex(communitySupport>=65 ? 0x477b62 : 0x7a6246);
@@ -968,6 +977,7 @@
       const nearHouse = !interiorMode && player.position.distanceTo(houseMarker.position) < 3.5;
       const eDown = !!keys.e;
       document.getElementById('garageTouch').style.display = garageOpen ? 'flex' : 'none';
+      document.getElementById('meetingChoices').style.display = townMeetingStarted && !townMeetingComplete && !dialogueOpen ? 'flex' : 'none';
       if (driving) status.textContent = 'Driving Benedict’s car — W/S accelerate and reverse · A/D steer · F exit';
       else if (garageOpen) status.textContent = 'Garage open — press 1–4 to customise · E to close';
       else if (nearGarage) status.textContent = 'New Town Garage — press E to customise Benedict’s car';
@@ -996,7 +1006,37 @@
       else if (missionStage === 10) status.textContent = 'You declined the Patron’s invitation';
       else status.textContent = 'Explore the neighbourhood';
 
-      if (bendigoMissionComplete && !bendigoReportComplete && nearWorkshop && eDown && !eWasDown && !dialogueOpen) {
+      if (townMeetingStarted && !townMeetingComplete && !dialogueOpen && (keys['1'] || keys['2'])) {
+        const publicGuarantees = !!keys['1'];
+        townMeetingChoice = publicGuarantees ? 'guarantees' : 'pilot';
+        townMeetingComplete = true;
+        if (publicGuarantees) {
+          communitySupport = THREE.MathUtils.clamp(communitySupport + 15,0,100);
+          bendigoTrust = THREE.MathUtils.clamp(bendigoTrust + 6,0,100);
+        } else {
+          patronStanding = THREE.MathUtils.clamp(patronStanding + 15,0,100);
+          communitySupport = THREE.MathUtils.clamp(communitySupport + 5,0,100);
+        }
+        townNoticeBoard.material.color.setHex(publicGuarantees ? 0x477b62 : 0x9a7845);
+        dialogueOpen = true; dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = publicGuarantees ? 'New Town — Public Guarantees' : 'New Town — A Staged Renewal';
+        dialogueText.textContent = publicGuarantees
+          ? 'Benedict asks for a published budget, protected spaces for local traders, and a public review before construction begins. The residents applaud the clear conditions. Bendigo says the neighbourhood now has a standard everyone can measure. Community support: ' + communitySupport + '/100. Bendigo trust: ' + bendigoTrust + '/100.'
+          : 'Benedict proposes a small waterfront pilot with resident representatives checking progress before it expands. The Patron welcomes a practical first step, while traders insist that their spaces remain protected. Patron standing: ' + patronStanding + '/100. Community support: ' + communitySupport + '/100.';
+        objective.textContent = 'Chapter complete: New Town chose ' + (publicGuarantees ? 'public guarantees' : 'a staged renewal pilot') + '. Your decision is saved.';
+        status.textContent = 'New Town public meeting concluded';
+        keys['1'] = false; keys['2'] = false;
+        saveGame(false);
+      } else if (bendigoReportComplete && !townMeetingStarted && nearWorkshop && eDown && !eWasDown && !dialogueOpen) {
+        townMeetingStarted = true;
+        dialogueOpen = true; dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'New Town — The Public Meeting';
+        const turnout = communitySupport >= 70 ? 'The room is full; traders and workshop families arrive ready to speak.' : patronStanding >= 70 ? 'Several residents arrive, alongside a representative from the Patron’s office.' : 'A small but determined group of residents gathers around the workshop tables.';
+        dialogueText.textContent = turnout + ' The future of the waterfront is on the agenda. Benedict can insist on public guarantees before work begins, or support a staged pilot with residents overseeing progress. Close this conversation, then press 1 or 2 to make the decision.';
+        objective.textContent = 'Public meeting: press 1 for public guarantees, or 2 for a staged renewal pilot with resident oversight.';
+        status.textContent = 'New Town public meeting — decision required';
+        saveGame(false);
+      } else if (bendigoMissionComplete && !bendigoReportComplete && nearWorkshop && eDown && !eWasDown && !dialogueOpen) {
         bendigoReportComplete = true;
         dialogueOpen = true; dialogue.style.display = 'block';
         dialogue.querySelector('strong').textContent = 'Bendigo — The Next Chapter';

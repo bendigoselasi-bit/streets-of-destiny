@@ -50,7 +50,7 @@
   <div id="hud"><strong>STREETS OF DESTINY</strong><br>BENEDICT’S STORY · NEW TOWN DISTRICT<br><span id="status">Playing as Benedict · Explore the neighbourhood</span></div>
   <div id="savePanel" style="position:fixed;top:112px;left:18px;z-index:3;display:flex;gap:7px"><button id="saveGame" style="padding:9px 12px;background:#14283a;color:#f5e7c8;border:1px solid #c99a4a;border-radius:3px;cursor:pointer">SAVE GAME</button><button id="loadGame" style="padding:9px 12px;background:#14283a;color:#f5e7c8;border:1px solid #c99a4a;border-radius:3px;cursor:pointer">LOAD GAME</button></div>
   <button id="soundToggle" aria-pressed="false" style="position:fixed;top:158px;left:18px;z-index:4;padding:9px 12px;background:#14283a;color:#f5e7c8;border:1px solid #c99a4a;border-radius:3px;cursor:pointer">CITY SOUND: OFF</button>
-  <div id="hint">WASD / Arrows: move · Mouse drag: look · E: interact · F: enter/exit car · J: action pulse · Shift: dodge</div>
+  <div id="hint">WASD / Arrows: move · Mouse drag: look · E: interact · F: car · G: Bendigo follow/stay · J: action pulse · Shift: dodge</div>
   <div id="mission" style="position:fixed;top:18px;right:18px;z-index:2;max-width:260px;padding:12px 16px;border:1px solid #ffffff33;border-radius:10px;background:#101820cc;line-height:1.5"><strong>FIRST MEETING</strong><br><span id="objective">Find Ama near the meeting point.</span></div>
   <div id="mobileControls" aria-label="Touch game controls">
     <div id="stickBase" aria-label="Movement joystick"><div id="stickKnob"></div></div>
@@ -58,6 +58,7 @@
       <button class="mobileBtn" data-key="e">INTERACT</button>
       <button class="mobileBtn" data-key="f">CAR</button>
       <button class="mobileBtn" data-key="j">ACTION</button>
+      <button class="mobileBtn" data-key="g">BENDIGO</button>
       <button class="mobileBtn" data-key="shift">DODGE</button>
     </div>
     <div id="garageTouch">
@@ -690,13 +691,14 @@
     let missionStage = 0;
     let savedPaint = 0;
     let bendigoJoined = false;
+    let bendigoFollowing = true;
     let bendigoWorkshopVisited = false;
     let bendigoFollowTime = 0;
     let bendigoGaitTime = 0;
     const SAVE_KEY = 'streetsOfDestiny.save.v1';
     function saveGame(showMessage=true) {
       const data = {
-        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoWorkshopVisited,
+        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoFollowing, bendigoWorkshopVisited,
         player: {x: player.position.x, z: player.position.z, yaw: player.rotation.y},
         car: {x: playerCar.position.x, z: playerCar.position.z, yaw: playerCar.rotation.y}
       };
@@ -717,6 +719,7 @@
         if(data.version!==1) throw new Error('Unsupported save version');
         missionStage=THREE.MathUtils.clamp(Number(data.missionStage)||0,0,10);
         bendigoJoined=!!data.bendigoJoined;
+        bendigoFollowing=data.bendigoFollowing!==false;
         bendigoWorkshopVisited=!!data.bendigoWorkshopVisited;
         selectedVehicle=0;
         selectVehicle(THREE.MathUtils.clamp(Number(data.selectedVehicle)||0,0,2));
@@ -744,6 +747,7 @@
     document.getElementById('loadGame').addEventListener('click',()=>loadGame(true));
     let dialogueOpen = false;
     let eWasDown = false;
+    let gWasDown = false;
     const clock = new THREE.Clock();
     function animate() {
       requestAnimationFrame(animate);
@@ -781,7 +785,7 @@
         player.position.x = THREE.MathUtils.clamp(player.position.x, interiorMode ? roomX-6.2 : -5.5, interiorMode ? roomX+6.2 : 5.5);
         player.position.z = THREE.MathUtils.clamp(player.position.z, interiorMode ? roomZ-6.2 : -72, interiorMode ? roomZ+6.2 : 72);
       }
-      if (bendigoJoined && !interiorMode) {
+      if (bendigoJoined && !interiorMode && bendigoFollowing) {
         const followForward = new THREE.Vector3(Math.sin(player.rotation.y),0,Math.cos(player.rotation.y));
         const followRight = new THREE.Vector3(Math.cos(player.rotation.y),0,-Math.sin(player.rotation.y));
         const followTarget = player.position.clone().addScaledVector(followForward,-1.65).addScaledVector(followRight,1.15);
@@ -800,6 +804,14 @@
         bendigo.position.y = Math.abs(Math.sin(bendigoFollowTime))*0.045;
         bendigoMarker.visible = false;
       }
+      const gDown = !!keys.g;
+      if (gDown && !gWasDown && bendigoJoined) {
+        bendigoFollowing = !bendigoFollowing;
+        status.textContent = bendigoFollowing ? "Bendigo is following you" : "Bendigo will stay here";
+        objective.textContent = bendigoFollowing ? "Bendigo is back with you. Press G to ask him to wait." : "Bendigo is waiting nearby. Press G to call him back.";
+        saveGame(false);
+      }
+      gWasDown = gDown;
       const moving = direction.lengthSq() > 0.001;
       if (moving) player.rotation.y = Math.atan2(direction.x, direction.z);
       gaitTime += dt * (dodging ? 13 : 9);

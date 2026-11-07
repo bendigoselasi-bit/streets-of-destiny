@@ -970,6 +970,12 @@
         dialogueText.textContent='Benedict, you should not have to carry this alone. I know the people around New Town, and they know me. I will walk with you. Let us return to the community workshop together and hear what the neighbourhood needs before the Patron makes any promises.';
         objective.textContent='New companion: Bendigo has joined you. Return to the community workshop together.';
         saveGame(false);
+      } else if (nearBendigoSupport && bendigoJoined && bendigoTrustChoiceMade && eDown && !eWasDown && !dialogueOpen) {
+        dialogueOpen = true; dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'Bendigo — Checking In';
+        dialogueText.textContent = bendigoTrust >= 60
+          ? 'You backed me when it mattered, Benedict. I trust your judgement more now, and I want us to keep making room for the community in every decision.'
+          : 'I know you want proof before committing. That is fair, Benedict. Let us keep asking questions and make sure the neighbourhood is heard.';
       } else if (nearWorkshop && bendigoJoined && !bendigoWorkshopVisited && eDown && !eWasDown && !dialogueOpen) {
         bendigoWorkshopVisited=true;
         dialogueOpen=true; dialogue.style.display='block';

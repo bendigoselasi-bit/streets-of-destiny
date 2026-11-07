@@ -697,13 +697,14 @@
     let bendigoWorkshopVisited = false;
     let bendigoPlanChoiceMade = false;
     let bendigoPlan = '';
+    let bendigoMissionComplete = false;
     let bendigoFollowTime = 0;
     let bendigoGaitTime = 0;
     let bendigoReunionTime = 0;
     const SAVE_KEY = 'streetsOfDestiny.save.v1';
     function saveGame(showMessage=true) {
       const data = {
-        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoFollowing, bendigoTrust, bendigoTrustChoiceMade, bendigoWorkshopVisited, bendigoPlanChoiceMade, bendigoPlan,
+        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoFollowing, bendigoTrust, bendigoTrustChoiceMade, bendigoWorkshopVisited, bendigoPlanChoiceMade, bendigoPlan, bendigoMissionComplete,
         player: {x: player.position.x, z: player.position.z, yaw: player.rotation.y},
         car: {x: playerCar.position.x, z: playerCar.position.z, yaw: playerCar.rotation.y}
       };
@@ -730,6 +731,7 @@
         bendigoWorkshopVisited=!!data.bendigoWorkshopVisited;
         bendigoPlanChoiceMade=!!data.bendigoPlanChoiceMade;
         bendigoPlan=data.bendigoPlan==='community' || data.bendigoPlan==='dialogue' ? data.bendigoPlan : '';
+        bendigoMissionComplete=!!data.bendigoMissionComplete;
         selectedVehicle=0;
         selectVehicle(THREE.MathUtils.clamp(Number(data.selectedVehicle)||0,0,2));
         savedPaint=THREE.MathUtils.clamp(Number(data.savedPaint)||0,0,3);
@@ -744,7 +746,7 @@
           THREE.MathUtils.clamp(Number(data.car?.z)||18,-72,72)
         );
         playerCar.rotation.y=Number(data.car?.yaw)||0;
-        objective.textContent = missionStage===0 ? 'Find Ama near the meeting point.' : 'Story progress restored. Continue your journey.';
+        objective.textContent = missionStage===0 ? 'Find Ama near the meeting point.' : bendigoPlanChoiceMade && !bendigoMissionComplete ? (bendigoPlan==='community' ? 'Community path: visit New Town Market and listen to the traders.' : 'Private path: meet the Patron at the waterfront office and hear his explanation.') : bendigoMissionComplete ? 'Bendigo chapter complete. Continue Benedict’s story.' : 'Story progress restored. Continue your journey.';
         if(showMessage) status.textContent='Saved game loaded — welcome back to New Town';
         return true;
       } catch(error) {
@@ -967,6 +969,8 @@
       else if (nearWorkshop && bendigoJoined && !bendigoWorkshopVisited) status.textContent = 'Visit the workshop with Bendigo — press E';
       else if (nearWorkshop && bendigoJoined && bendigoWorkshopVisited && !bendigoTrustChoiceMade) status.textContent = 'Bendigo wants your view — press 1 to support his plan or 2 to ask for more evidence';
       else if (nearWorkshop && bendigoJoined && bendigoTrustChoiceMade && !bendigoPlanChoiceMade) status.textContent = 'New chapter: choose 1 for a community forum or 2 for a private conversation with the Patron';
+      else if (bendigoPlanChoiceMade && !bendigoMissionComplete && bendigoPlan === 'community' && nearMarket) status.textContent = 'Community forum: speak with New Town traders — press E';
+      else if (bendigoPlanChoiceMade && !bendigoMissionComplete && bendigoPlan === 'dialogue' && nearOffice) status.textContent = 'Private path: meet the Patron at the waterfront office — press E';
       else if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
       else if (nearWorkshop && missionStage === 1) status.textContent = 'Community workshop — press E to enter';
       else if (nearKofi && missionStage === 2) status.textContent = 'Kofi is ready to talk — press E';
@@ -980,7 +984,23 @@
       else if (missionStage === 10) status.textContent = 'You declined the Patron’s invitation';
       else status.textContent = 'Explore the neighbourhood';
 
-      if (nearBendigoSupport && !bendigoJoined && eDown && !eWasDown && !dialogueOpen) {
+      if (bendigoPlanChoiceMade && !bendigoMissionComplete && bendigoPlan === 'community' && nearMarket && eDown && !eWasDown && !dialogueOpen) {
+        bendigoMissionComplete = true;
+        dialogueOpen = true; dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'New Town Traders — Community Forum';
+        dialogueText.textContent = 'The market traders have gathered to share what they need: reliable lighting, fair space for small businesses, and training opportunities for local families. Benedict listens and records their concerns. Bendigo thanks the group for speaking openly. The community-first mission is complete; return to Bendigo at the workshop to discuss what comes next.';
+        objective.textContent = 'Community path complete: return to Bendigo at the workshop and discuss the traders’ concerns.';
+        status.textContent = 'Community forum completed';
+        saveGame(false);
+      } else if (bendigoPlanChoiceMade && !bendigoMissionComplete && bendigoPlan === 'dialogue' && nearOffice && eDown && !eWasDown && !dialogueOpen) {
+        bendigoMissionComplete = true;
+        dialogueOpen = true; dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'The Patron — Private Discussion';
+        dialogueText.textContent = 'The Patron explains that the waterfront renewal proposal is still being shaped. He says the plan could bring training and new public spaces, but he has not yet agreed to publish the full budget or guarantee how local traders will be protected. Benedict asks for those details in writing before anyone makes a commitment. Bendigo reminds him that the answers must be shared with New Town. The private discussion is complete; return to Bendigo at the workshop.';
+        objective.textContent = 'Private discussion complete: return to Bendigo at the workshop and share what you learned.';
+        status.textContent = 'Private discussion completed';
+        saveGame(false);
+      } else if (nearBendigoSupport && !bendigoJoined && eDown && !eWasDown && !dialogueOpen) {
         bendigoJoined=true;
         dialogueOpen=true; dialogue.style.display='block';
         dialogue.querySelector('strong').textContent='Bendigo — Your Ally';

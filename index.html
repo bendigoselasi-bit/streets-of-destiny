@@ -695,13 +695,15 @@
     let bendigoTrust = 50;
     let bendigoTrustChoiceMade = false;
     let bendigoWorkshopVisited = false;
+    let bendigoPlanChoiceMade = false;
+    let bendigoPlan = '';
     let bendigoFollowTime = 0;
     let bendigoGaitTime = 0;
     let bendigoReunionTime = 0;
     const SAVE_KEY = 'streetsOfDestiny.save.v1';
     function saveGame(showMessage=true) {
       const data = {
-        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoFollowing, bendigoTrust, bendigoTrustChoiceMade, bendigoWorkshopVisited,
+        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoFollowing, bendigoTrust, bendigoTrustChoiceMade, bendigoWorkshopVisited, bendigoPlanChoiceMade, bendigoPlan,
         player: {x: player.position.x, z: player.position.z, yaw: player.rotation.y},
         car: {x: playerCar.position.x, z: playerCar.position.z, yaw: playerCar.rotation.y}
       };
@@ -726,6 +728,8 @@
         bendigoTrust=THREE.MathUtils.clamp(Number(data.bendigoTrust??50),0,100);
         bendigoTrustChoiceMade=!!data.bendigoTrustChoiceMade;
         bendigoWorkshopVisited=!!data.bendigoWorkshopVisited;
+        bendigoPlanChoiceMade=!!data.bendigoPlanChoiceMade;
+        bendigoPlan=data.bendigoPlan==='community' || data.bendigoPlan==='dialogue' ? data.bendigoPlan : '';
         selectedVehicle=0;
         selectVehicle(THREE.MathUtils.clamp(Number(data.selectedVehicle)||0,0,2));
         savedPaint=THREE.MathUtils.clamp(Number(data.savedPaint)||0,0,3);
@@ -962,6 +966,7 @@
       else if (nearBendigoSupport && !bendigoJoined) status.textContent = 'Bendigo is nearby — press E to talk';
       else if (nearWorkshop && bendigoJoined && !bendigoWorkshopVisited) status.textContent = 'Visit the workshop with Bendigo — press E';
       else if (nearWorkshop && bendigoJoined && bendigoWorkshopVisited && !bendigoTrustChoiceMade) status.textContent = 'Bendigo wants your view — press 1 to support his plan or 2 to ask for more evidence';
+      else if (nearWorkshop && bendigoJoined && bendigoTrustChoiceMade && !bendigoPlanChoiceMade) status.textContent = 'New chapter: choose 1 for a community forum or 2 for a private conversation with the Patron';
       else if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
       else if (nearWorkshop && missionStage === 1) status.textContent = 'Community workshop — press E to enter';
       else if (nearKofi && missionStage === 2) status.textContent = 'Kofi is ready to talk — press E';
@@ -985,9 +990,13 @@
       } else if (nearBendigoSupport && bendigoJoined && bendigoTrustChoiceMade && eDown && !eWasDown && !dialogueOpen) {
         dialogueOpen = true; dialogue.style.display = 'block';
         dialogue.querySelector('strong').textContent = 'Bendigo — Checking In';
-        dialogueText.textContent = bendigoTrust >= 60
-          ? 'You backed me when it mattered, Benedict. I trust your judgement more now, and I want us to keep making room for the community in every decision.'
-          : 'I know you want proof before committing. That is fair, Benedict. Let us keep asking questions and make sure the neighbourhood is heard.';
+        dialogueText.textContent = bendigoPlan === 'community'
+          ? 'The forum is still our next step, Benedict. I have started speaking with the workshop families. They are counting on us to listen.'
+          : bendigoPlan === 'dialogue'
+            ? 'I am ready for that private conversation with the Patron, Benedict. I will listen carefully, and then we must bring the answers back to New Town.'
+            : bendigoTrust >= 60
+              ? 'You backed me when it mattered, Benedict. I trust your judgement more now, and I want us to keep making room for the community in every decision.'
+              : 'I know you want proof before committing. That is fair, Benedict. Let us keep asking questions and make sure the neighbourhood is heard.';
       } else if (nearWorkshop && bendigoJoined && !bendigoWorkshopVisited && eDown && !eWasDown && !dialogueOpen) {
         bendigoWorkshopVisited=true;
         dialogueOpen=true; dialogue.style.display='block';
@@ -1006,6 +1015,22 @@
           : 'That is fair, Benedict. Trust should be earned, not demanded. I will bring you clearer details and let the community speak for itself. I respect that you want to be careful.';
         objective.textContent = 'Bendigo trust: ' + bendigoTrust + '/100. Your choice will shape future conversations.';
         status.textContent = backsBendigo ? 'You supported Bendigo' : 'You asked Bendigo for more evidence';
+        keys['1'] = false; keys['2'] = false;
+        saveGame(false);
+      } else if (nearWorkshop && bendigoJoined && bendigoWorkshopVisited && bendigoTrustChoiceMade && !bendigoPlanChoiceMade && (keys['1'] || keys['2']) && !dialogueOpen) {
+        const communityFirst = !!keys['1'];
+        bendigoPlanChoiceMade = true;
+        bendigoPlan = communityFirst ? 'community' : 'dialogue';
+        bendigoTrust = THREE.MathUtils.clamp(bendigoTrust + (communityFirst ? 10 : 0), 0, 100);
+        dialogueOpen = true; dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = communityFirst ? 'Bendigo — The Community Comes First' : 'Bendigo — A Private Conversation';
+        dialogueText.textContent = communityFirst
+          ? 'Then we will invite the workshop families and local traders to a public forum. Their voices should shape the future before anyone signs an agreement. I am glad we are doing this together.'
+          : 'A private conversation could help us understand the proposal before the whole neighbourhood gets involved. I will come with you, but promise me we will bring the answers back to the people.';
+        objective.textContent = communityFirst
+          ? 'New chapter: organise a community forum with Bendigo. Your plan puts residents at the centre.'
+          : 'New chapter: arrange a private discussion with the Patron. Bendigo expects you to report back to New Town.';
+        status.textContent = communityFirst ? 'You chose the community-first plan · Trust ' + bendigoTrust + '/100' : 'You chose to hear the Patron privately · Trust ' + bendigoTrust + '/100';
         keys['1'] = false; keys['2'] = false;
         saveGame(false);
       } else if (keys.f && !driving && nearPlayerCar) {

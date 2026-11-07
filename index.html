@@ -321,6 +321,9 @@
       ring.rotation.x=Math.PI/2; ring.position.y=0.16; g.add(ring); g.position.set(x,0,z+1.2); scene.add(g); return g;
     }
     const marketMarker=businessMarker(4.1,12,0x9b6241), cafeMarker=businessMarker(-4.1,-43,0x315b66);
+    // Public notice board: its appearance changes with the community's response.
+    const townNoticeBoard=box(2.1,1.35,0.16,0x7a6246,6.15,1.65,14.6);
+    box(0.16,1.8,0.16,0x493a2b,5.45,0.9,14.6); box(0.16,1.8,0.16,0x493a2b,6.85,0.9,14.6);
     const roomX=100, roomZ=100;
     function roomPart(parent,w,h,d,color,x,y,z) {
       const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:0.85}));
@@ -699,13 +702,15 @@
     let bendigoPlan = '';
     let bendigoMissionComplete = false;
     let bendigoReportComplete = false;
+    let communitySupport = 50;
+    let patronStanding = 50;
     let bendigoFollowTime = 0;
     let bendigoGaitTime = 0;
     let bendigoReunionTime = 0;
     const SAVE_KEY = 'streetsOfDestiny.save.v1';
     function saveGame(showMessage=true) {
       const data = {
-        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoFollowing, bendigoTrust, bendigoTrustChoiceMade, bendigoWorkshopVisited, bendigoPlanChoiceMade, bendigoPlan, bendigoMissionComplete, bendigoReportComplete,
+        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoFollowing, bendigoTrust, bendigoTrustChoiceMade, bendigoWorkshopVisited, bendigoPlanChoiceMade, bendigoPlan, bendigoMissionComplete, bendigoReportComplete, communitySupport, patronStanding,
         player: {x: player.position.x, z: player.position.z, yaw: player.rotation.y},
         car: {x: playerCar.position.x, z: playerCar.position.z, yaw: playerCar.rotation.y}
       };
@@ -734,6 +739,10 @@
         bendigoPlan=data.bendigoPlan==='community' || data.bendigoPlan==='dialogue' ? data.bendigoPlan : '';
         bendigoMissionComplete=!!data.bendigoMissionComplete;
         bendigoReportComplete=!!data.bendigoReportComplete;
+        communitySupport=THREE.MathUtils.clamp(Number(data.communitySupport??50),0,100);
+        patronStanding=THREE.MathUtils.clamp(Number(data.patronStanding??50),0,100);
+        townNoticeBoard.material.color.setHex(communitySupport>=65 ? 0x477b62 : 0x7a6246);
+        officeRing.material.color.setHex(patronStanding>=65 ? 0x8b6dba : 0x64c9ff);
         selectedVehicle=0;
         selectVehicle(THREE.MathUtils.clamp(Number(data.selectedVehicle)||0,0,2));
         savedPaint=THREE.MathUtils.clamp(Number(data.savedPaint)||0,0,3);
@@ -992,13 +1001,16 @@
         dialogueOpen = true; dialogue.style.display = 'block';
         dialogue.querySelector('strong').textContent = 'Bendigo — The Next Chapter';
         dialogueText.textContent = bendigoPlan === 'community'
-          ? 'Thank you for bringing the traders’ concerns back, Benedict. We now have a clearer list of what New Town needs. I will help organise the next community meeting, and we can ask the Patron to respond to these points in public.'
-          : 'You kept your word and brought the answers back, Benedict. We still need the written budget and clear protections for local traders. We can continue the conversation, but New Town deserves to be part of every decision.';
+          ? 'Thank you for bringing the traders’ concerns back, Benedict. People have started adding ideas to the market notice board. Community support is now ' + communitySupport + '/100, and I trust you more because you listened.'
+          : 'You kept your word and brought the answers back, Benedict. The Patron is more willing to keep talking, but we still need public commitments. Patron standing: ' + patronStanding + '/100. Bendigo trust: ' + bendigoTrust + '/100.';
         objective.textContent = 'Bendigo chapter complete. Your chosen path has shaped the next steps for New Town.';
         status.textContent = 'Bendigo story chapter completed';
         saveGame(false);
       } else if (bendigoPlanChoiceMade && !bendigoMissionComplete && bendigoPlan === 'community' && nearMarket && eDown && !eWasDown && !dialogueOpen) {
         bendigoMissionComplete = true;
+        communitySupport = THREE.MathUtils.clamp(communitySupport + 25,0,100);
+        bendigoTrust = THREE.MathUtils.clamp(bendigoTrust + 8,0,100);
+        townNoticeBoard.material.color.setHex(0x477b62);
         dialogueOpen = true; dialogue.style.display = 'block';
         dialogue.querySelector('strong').textContent = 'New Town Traders — Community Forum';
         dialogueText.textContent = 'The market traders have gathered to share what they need: reliable lighting, fair space for small businesses, and training opportunities for local families. Benedict listens and records their concerns. Bendigo thanks the group for speaking openly. The community-first mission is complete; return to Bendigo at the workshop to discuss what comes next.';
@@ -1007,6 +1019,9 @@
         saveGame(false);
       } else if (bendigoPlanChoiceMade && !bendigoMissionComplete && bendigoPlan === 'dialogue' && nearOffice && eDown && !eWasDown && !dialogueOpen) {
         bendigoMissionComplete = true;
+        patronStanding = THREE.MathUtils.clamp(patronStanding + 25,0,100);
+        bendigoTrust = THREE.MathUtils.clamp(bendigoTrust - 4,0,100);
+        officeRing.material.color.setHex(0x8b6dba);
         dialogueOpen = true; dialogue.style.display = 'block';
         dialogue.querySelector('strong').textContent = 'The Patron — Private Discussion';
         dialogueText.textContent = 'The Patron explains that the waterfront renewal proposal is still being shaped. He says the plan could bring training and new public spaces, but he has not yet agreed to publish the full budget or guarantee how local traders will be protected. Benedict asks for those details in writing before anyone makes a commitment. Bendigo reminds him that the answers must be shared with New Town. The private discussion is complete; return to Bendigo at the workshop.';

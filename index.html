@@ -49,6 +49,7 @@
   <div id="cinemaTop"></div><div id="cinemaBottom"></div>
   <div id="hud"><strong>STREETS OF DESTINY</strong><br>BENEDICT’S STORY · NEW TOWN DISTRICT<br><span id="status">Playing as Benedict · Explore the neighbourhood</span></div>
   <div id="savePanel" style="position:fixed;top:112px;left:18px;z-index:3;display:flex;gap:7px"><button id="saveGame" style="padding:9px 12px;background:#14283a;color:#f5e7c8;border:1px solid #c99a4a;border-radius:3px;cursor:pointer">SAVE GAME</button><button id="loadGame" style="padding:9px 12px;background:#14283a;color:#f5e7c8;border:1px solid #c99a4a;border-radius:3px;cursor:pointer">LOAD GAME</button></div>
+  <button id="soundToggle" aria-pressed="false" style="position:fixed;top:158px;left:18px;z-index:4;padding:9px 12px;background:#14283a;color:#f5e7c8;border:1px solid #c99a4a;border-radius:3px;cursor:pointer">CITY SOUND: OFF</button>
   <div id="hint">WASD / Arrows: move · Mouse drag: look · E: interact · F: enter/exit car · J: action pulse · Shift: dodge</div>
   <div id="mission" style="position:fixed;top:18px;right:18px;z-index:2;max-width:260px;padding:12px 16px;border:1px solid #ffffff33;border-radius:10px;background:#101820cc;line-height:1.5"><strong>FIRST MEETING</strong><br><span id="objective">Find Ama near the meeting point.</span></div>
   <div id="mobileControls" aria-label="Touch game controls">
@@ -65,7 +66,7 @@
       <button class="mobileBtn" data-key="5">SUV</button><button class="mobileBtn" data-key="6">SPORT</button>
     </div>
   </div>
-  <div id="dialogue" style="display:none;position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:3;width:min(520px,calc(100% - 40px));padding:16px 18px;border:1px solid #ffffff55;border-radius:12px;background:#101820f2;line-height:1.55;text-align:center"><strong>Ama</strong><br><span id="dialogueText"></span><br><small>Press E to close</small></div>
+  <div id="dialogue" style="display:none;position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:3;width:min(520px,calc(100% - 40px));padding:16px 18px;border:1px solid #ffffff55;border-radius:12px;background:#101820f2;line-height:1.55;text-align:center"><strong>Ama</strong><br><span id="dialogueText"></span><br><button id="speakDialogue" style="margin-top:12px;padding:8px 12px;background:#14283a;color:#f5e7c8;border:1px solid #c99a4a;border-radius:3px;cursor:pointer">READ DIALOGUE</button> <small>Press E to close</small></div>
   <script type="module">
     import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
@@ -656,6 +657,36 @@
     const objective = document.getElementById('objective');
     const dialogue = document.getElementById('dialogue');
     const dialogueText = document.getElementById('dialogueText');
+    // Optional browser-generated ambience and voice playback; both start only after player input.
+    let ambienceContext = null;
+    let ambienceNodes = [];
+    const soundToggle = document.getElementById('soundToggle');
+    function stopAmbience() {
+      ambienceNodes.forEach(node => { try { node.stop(); } catch (_) {} });
+      ambienceNodes = [];
+      if (ambienceContext) { ambienceContext.close().catch(() => {}); ambienceContext = null; }
+    }
+    soundToggle.addEventListener('click', async () => {
+      if (ambienceContext) { stopAmbience(); soundToggle.textContent = 'CITY SOUND: OFF'; soundToggle.setAttribute('aria-pressed', 'false'); return; }
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) { soundToggle.textContent = 'AUDIO NOT SUPPORTED'; return; }
+      ambienceContext = new AudioContextClass();
+      await ambienceContext.resume();
+      const master = ambienceContext.createGain(); master.gain.value = 0.035; master.connect(ambienceContext.destination);
+      const low = ambienceContext.createOscillator(); const lowGain = ambienceContext.createGain();
+      low.type = 'sine'; low.frequency.value = 68; lowGain.gain.value = 0.55; low.connect(lowGain); lowGain.connect(master); low.start();
+      const high = ambienceContext.createOscillator(); const highGain = ambienceContext.createGain();
+      high.type = 'sine'; high.frequency.value = 113; highGain.gain.value = 0.16; high.connect(highGain); highGain.connect(master); high.start();
+      ambienceNodes = [low, high]; soundToggle.textContent = 'CITY SOUND: ON'; soundToggle.setAttribute('aria-pressed', 'true');
+    });
+    const speakDialogue = document.getElementById('speakDialogue');
+    speakDialogue.addEventListener('click', () => {
+      if (!('speechSynthesis' in window)) { speakDialogue.textContent = 'VOICE NOT SUPPORTED'; return; }
+      window.speechSynthesis.cancel();
+      const speaker = dialogue.querySelector('strong').textContent;
+      const utterance = new SpeechSynthesisUtterance(speaker + '. ' + dialogueText.textContent);
+      utterance.rate = 0.94; utterance.pitch = 0.92; window.speechSynthesis.speak(utterance);
+    });
     let missionStage = 0;
     let savedPaint = 0;
     let bendigoJoined = false;
@@ -1055,6 +1086,7 @@
       } else if (eDown && !eWasDown && dialogueOpen) {
         dialogueOpen = false;
         dialogue.style.display = 'none';
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
       }
       eWasDown = eDown;
       renderer.render(scene, camera);

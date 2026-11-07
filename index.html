@@ -697,6 +697,7 @@
     let bendigoWorkshopVisited = false;
     let bendigoFollowTime = 0;
     let bendigoGaitTime = 0;
+    let bendigoReunionTime = 0;
     const SAVE_KEY = 'streetsOfDestiny.save.v1';
     function saveGame(showMessage=true) {
       const data = {
@@ -813,6 +814,14 @@
         bendigoFollowing = !bendigoFollowing;
         status.textContent = bendigoFollowing ? "Bendigo is following you" : "Bendigo will stay here";
         objective.textContent = bendigoFollowing ? "Bendigo is back with you. Press G to ask him to wait." : "Bendigo is waiting nearby. Press G to call him back.";
+        if (bendigoFollowing) {
+          bendigoReunionTime = 3.8;
+          dialogueOpen = true; dialogue.style.display = 'block';
+          dialogue.querySelector('strong').textContent = 'Bendigo — Back Together';
+          dialogueText.textContent = bendigoTrust >= 60
+            ? 'I knew we would find our way back to the same road, Benedict. Whatever comes next, we face it with the neighbourhood in mind.'
+            : 'I am here, Benedict. We may not agree on every step, but we can keep talking and make sure neither of us loses sight of New Town.';
+        }
         if (bendigoTrustChoiceMade) status.textContent += " · Trust " + bendigoTrust + "/100";
         saveGame(false);
       }
@@ -918,10 +927,13 @@
       patronGestureTime += dt * (patronSpeaking ? 2.4 : 0.8);
       benedict.rotation.z = THREE.MathUtils.lerp(benedict.rotation.z, patronSpeaking ? Math.sin(patronGestureTime)*0.025 : 0, Math.min(1,dt*3));
       bHead.rotation.x = THREE.MathUtils.lerp(bHead.rotation.x, patronSpeaking ? Math.sin(patronGestureTime*0.55)*0.055 : 0, Math.min(1,dt*3));
+      bendigoReunionTime = Math.max(0, bendigoReunionTime - dt);
+      const reunionShot = bendigoReunionTime > 0 && bendigoJoined && !interiorMode && !driving;
       const inCinematic = dialogueOpen && !interiorMode && !driving;
-      const target = player.position.clone().add(new THREE.Vector3(0, inCinematic ? 2.65 : driving ? 4.2 : 3.2, inCinematic ? 5.6 : driving ? 10 : 7.5).applyAxisAngle(new THREE.Vector3(0,1,0), cameraYaw));
-      camera.position.lerp(target, inCinematic ? 0.055 : 0.09);
-      const focusPoint = inCinematic ? new THREE.Vector3(player.position.x, player.position.y + 1.55, player.position.z) : player.position.clone().add(new THREE.Vector3(0,1.2,0));
+      const shotAnchor = reunionShot ? player.position.clone().lerp(bendigo.position, 0.42) : player.position.clone();
+      const target = shotAnchor.clone().add(new THREE.Vector3(0, inCinematic ? (reunionShot ? 3.05 : 2.65) : driving ? 4.2 : 3.2, inCinematic ? (reunionShot ? 7.1 : 5.6) : driving ? 10 : 7.5).applyAxisAngle(new THREE.Vector3(0,1,0), cameraYaw));
+      camera.position.lerp(target, inCinematic ? (reunionShot ? 0.075 : 0.055) : 0.09);
+      const focusPoint = inCinematic ? new THREE.Vector3(shotAnchor.x, shotAnchor.y + (reunionShot ? 1.48 : 1.55), shotAnchor.z) : player.position.clone().add(new THREE.Vector3(0,1.2,0));
       camera.lookAt(focusPoint);
       document.body.classList.toggle('cinematic', inCinematic);
       const nearAma = player.position.distanceTo(ama.position) < 3.2;

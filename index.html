@@ -692,13 +692,15 @@
     let savedPaint = 0;
     let bendigoJoined = false;
     let bendigoFollowing = true;
+    let bendigoTrust = 50;
+    let bendigoTrustChoiceMade = false;
     let bendigoWorkshopVisited = false;
     let bendigoFollowTime = 0;
     let bendigoGaitTime = 0;
     const SAVE_KEY = 'streetsOfDestiny.save.v1';
     function saveGame(showMessage=true) {
       const data = {
-        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoFollowing, bendigoWorkshopVisited,
+        version: 1, missionStage, selectedVehicle, savedPaint, bendigoJoined, bendigoFollowing, bendigoTrust, bendigoTrustChoiceMade, bendigoWorkshopVisited,
         player: {x: player.position.x, z: player.position.z, yaw: player.rotation.y},
         car: {x: playerCar.position.x, z: playerCar.position.z, yaw: playerCar.rotation.y}
       };
@@ -720,6 +722,8 @@
         missionStage=THREE.MathUtils.clamp(Number(data.missionStage)||0,0,10);
         bendigoJoined=!!data.bendigoJoined;
         bendigoFollowing=data.bendigoFollowing!==false;
+        bendigoTrust=THREE.MathUtils.clamp(Number(data.bendigoTrust??50),0,100);
+        bendigoTrustChoiceMade=!!data.bendigoTrustChoiceMade;
         bendigoWorkshopVisited=!!data.bendigoWorkshopVisited;
         selectedVehicle=0;
         selectVehicle(THREE.MathUtils.clamp(Number(data.selectedVehicle)||0,0,2));
@@ -809,6 +813,7 @@
         bendigoFollowing = !bendigoFollowing;
         status.textContent = bendigoFollowing ? "Bendigo is following you" : "Bendigo will stay here";
         objective.textContent = bendigoFollowing ? "Bendigo is back with you. Press G to ask him to wait." : "Bendigo is waiting nearby. Press G to call him back.";
+        if (bendigoTrustChoiceMade) status.textContent += " · Trust " + bendigoTrust + "/100";
         saveGame(false);
       }
       gWasDown = gDown;
@@ -944,6 +949,7 @@
       else if (nearHouse) status.textContent = 'Benedict’s Home — press E to enter';
       else if (nearBendigoSupport && !bendigoJoined) status.textContent = 'Bendigo is nearby — press E to talk';
       else if (nearWorkshop && bendigoJoined && !bendigoWorkshopVisited) status.textContent = 'Visit the workshop with Bendigo — press E';
+      else if (nearWorkshop && bendigoJoined && bendigoWorkshopVisited && !bendigoTrustChoiceMade) status.textContent = 'Bendigo wants your view — press 1 to support his plan or 2 to ask for more evidence';
       else if (nearAma && missionStage === 0) status.textContent = 'Ama is nearby — press E to talk';
       else if (nearWorkshop && missionStage === 1) status.textContent = 'Community workshop — press E to enter';
       else if (nearKofi && missionStage === 2) status.textContent = 'Kofi is ready to talk — press E';
@@ -970,6 +976,19 @@
         dialogue.querySelector('strong').textContent='Bendigo — At the Workshop';
         dialogueText.textContent='This place matters, Benedict. People here need steady work, a safe place to learn, and a real say in what happens next. I will help you bring their concerns into the conversation with the Patron. We move forward together, but we do not forget who this neighbourhood belongs to.';
         objective.textContent='Chapter progress: You and Bendigo have heard the workshop community. Continue exploring New Town and decide how to approach the Patron.';
+        saveGame(false);
+      } else if (nearWorkshop && bendigoJoined && bendigoWorkshopVisited && !bendigoTrustChoiceMade && (keys['1'] || keys['2']) && !dialogueOpen) {
+        const backsBendigo = !!keys['1'];
+        bendigoTrust = THREE.MathUtils.clamp(bendigoTrust + (backsBendigo ? 15 : 5), 0, 100);
+        bendigoTrustChoiceMade = true;
+        dialogueOpen = true; dialogue.style.display = 'block';
+        dialogue.querySelector('strong').textContent = 'Bendigo — Your Decision';
+        dialogueText.textContent = backsBendigo
+          ? 'I appreciate you standing with me, Benedict. We will still listen to the people first. Your support means I can speak openly, and I will stand beside you when the difficult choices come.'
+          : 'That is fair, Benedict. Trust should be earned, not demanded. I will bring you clearer details and let the community speak for itself. I respect that you want to be careful.';
+        objective.textContent = 'Bendigo trust: ' + bendigoTrust + '/100. Your choice will shape future conversations.';
+        status.textContent = backsBendigo ? 'You supported Bendigo' : 'You asked Bendigo for more evidence';
+        keys['1'] = false; keys['2'] = false;
         saveGame(false);
       } else if (keys.f && !driving && nearPlayerCar) {
         driving = true; carSpeed = 0; playerCar.position.set(player.position.x,0,player.position.z);
